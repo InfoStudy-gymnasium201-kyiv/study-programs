@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="uk" class="h-full bg-slate-900 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQLite Studio — Навчальний Тренажер Баз Даних</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- SQL.js WebAssembly Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        code, pre, .font-mono { font-family: 'Fira Code', monospace; }
+        
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="h-full flex flex-col overflow-hidden bg-slate-950 text-slate-100">
+
+    <!-- App Header -->
+    <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between shadow-md shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="bg-blue-600 text-white p-2 rounded-lg shadow-lg shadow-blue-500/20">
+                <i class="fa-solid fa-database text-xl"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg text-slate-100 leading-tight">SQLite Studio</h1>
+                <p class="text-xs text-slate-400">Навчальний тренажер баз даних</p>
+            </div>
+        </div>
+
+        <!-- Header Actions -->
+        <div class="flex items-center space-x-2 sm:space-x-3">
+            <button id="btn-presets" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-slate-700">
+                <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i>
+                <span class="hidden md:inline">Шаблони БД</span>
+            </button>
+
+            <button id="btn-import-modal" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 shadow-md shadow-blue-600/20">
+                <i class="fa-solid fa-file-import"></i>
+                <span>Імпорт SQL (DDL)</span>
+            </button>
+
+            <button id="btn-export-modal" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 shadow-md shadow-emerald-600/20">
+                <i class="fa-solid fa-file-export"></i>
+                <span>Експорт SQL</span>
+            </button>
+
+            <button id="btn-reset-db" title="Очистити всю базу даних" class="bg-slate-800 hover:bg-rose-900/50 hover:text-rose-300 text-slate-400 px-2.5 py-1.5 rounded-lg text-sm border border-slate-700 transition">
+                <i class="fa-solid fa-trash-can"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <div class="flex flex-1 overflow-hidden">
+
+        <!-- Sidebar: Table Browser -->
+        <aside class="w-64 sm:w-72 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0">
+            <!-- Sidebar Header -->
+            <div class="p-3 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                    <i class="fa-solid fa-table-list text-blue-400"></i>
+                    Таблиці БД (<span id="table-count">0</span>)
+                </span>
+                <button id="btn-quick-add-table" class="text-xs bg-slate-800 hover:bg-slate-700 text-blue-400 px-2 py-1 rounded border border-slate-700 transition flex items-center gap-1">
+                    <i class="fa-solid fa-plus"></i> Створити
+                </button>
+            </div>
+
+            <!-- Table List -->
+            <div id="table-list" class="flex-1 overflow-y-auto p-2 space-y-1">
+                <!-- Dynamic items rendered via JS -->
+                <div class="text-center py-8 text-slate-500 text-sm px-4">
+                    <i class="fa-solid fa-database text-3xl mb-2 opacity-40"></i>
+                    <p>База даних порожня.</p>
+                    <p class="text-xs mt-1 text-slate-600">Натисніть "Імпорт SQL" або виберіть готові шаблони.</p>
+                </div>
+            </div>
+
+            <!-- Query Mode Toggle Footer -->
+            <div class="p-3 border-t border-slate-800 bg-slate-900/80">
+                <button id="btn-toggle-sql-runner" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2 px-3 rounded-lg text-xs font-medium border border-slate-700 transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-terminal text-emerald-400"></i>
+                    <span>Консоль SQL-запитів</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Area -->
+        <main class="flex-1 flex flex-col bg-slate-950 overflow-hidden relative">
+
+            <!-- Active Table View -->
+            <div id="view-table-data" class="flex-1 flex flex-col overflow-hidden">
+                <!-- Table View Header -->
+                <div class="bg-slate-900/90 border-b border-slate-800 p-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h2 id="current-table-title" class="text-xl font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-table text-blue-400"></i>
+                                <span>Виберіть таблицю</span>
+                            </h2>
+                            <span id="current-table-badge" class="bg-blue-500/10 text-blue-400 text-xs px-2.5 py-0.5 rounded-full border border-blue-500/20 font-medium">0 записів</span>
+                        </div>
+                        <p id="current-table-schema-preview" class="text-xs text-slate-400 mt-1 font-mono truncate max-w-xl">
+                            Виберіть таблицю зі списку ліворуч для додавання даних
+                        </p>
+                    </div>
+
+                    <!-- Action buttons for selected table -->
+                    <div id="table-actions" class="flex items-center space-x-2 hidden">
+                        <button id="btn-add-record" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 shadow-md shadow-emerald-600/20">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Додати новий запис</span>
+                        </button>
+
+                        <button id="btn-drop-table" class="bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/50 px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center space-x-1.5" title="Видалити таблицю">
+                            <i class="fa-solid fa-trash"></i>
+                            <span class="hidden sm:inline">Видалити</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Table Content Container -->
+                <div class="flex-1 overflow-auto p-4">
+                    <div id="data-table-wrapper" class="bg-slate-900 rounded-xl border border-slate-800 shadow-xl overflow-hidden min-h-[250px] flex flex-col justify-center items-center text-slate-500">
+                        <i class="fa-solid fa-arrow-left text-4xl mb-3 text-slate-700 animate-pulse"></i>
+                        <p class="text-base font-medium text-slate-400">Не обрано жодної таблиці</p>
+                        <p class="text-xs text-slate-600 mt-1">Оберіть таблицю з меню ліворуч або створіть нову за допомогою "Імпорт SQL"</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SQL Query Runner View (Hidden by default) -->
+            <div id="view-sql-runner" class="flex-1 flex flex-col overflow-hidden bg-slate-950 hidden">
+                <div class="bg-slate-900 p-4 border-b border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-terminal text-emerald-400 text-lg"></i>
+                        <h2 class="font-bold text-slate-100">SQL Консоль (Тестування запитів)</h2>
+                    </div>
+                    <button id="btn-close-sql-runner" class="text-slate-400 hover:text-white p-1">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+
+                <div class="p-4 flex-1 flex flex-col space-y-4 overflow-y-auto">
+                    <!-- Query Input -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-col">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">SQL Запит (`SELECT`, `JOIN`, тощо)</label>
+                            <div class="space-x-1">
+                                <button onclick="setSampleQuery('SELECT')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded border border-slate-700">SELECT *</button>
+                                <button onclick="setSampleQuery('JOIN')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded border border-slate-700">JOIN</button>
+                                <button onclick="setSampleQuery('COUNT')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded border border-slate-700">COUNT & GROUP</button>
+                            </div>
+                        </div>
+                        <textarea id="sql-query-input" rows="4" class="w-full bg-slate-950 text-emerald-400 font-mono text-sm p-3 rounded-lg border border-slate-800 focus:outline-none focus:border-emerald-500/50 resize-y" placeholder="Введіть ваш SQL запит тут... (наприклад: SELECT * FROM users;)"></textarea>
+                        <div class="mt-3 flex justify-end">
+                            <button id="btn-run-query" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-lg font-medium text-sm transition flex items-center space-x-2">
+                                <i class="fa-solid fa-play"></i>
+                                <span>Виконати Запит</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Query Results -->
+                    <div class="flex-1 flex flex-col">
+                        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Результат виконання</h3>
+                        <div id="query-result-output" class="flex-1 bg-slate-900 border border-slate-800 rounded-xl p-4 overflow-auto font-mono text-sm text-slate-300">
+                            <span class="text-slate-600 italic">Натисніть "Виконати Запит" для відображення результатів.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- MODAL 1: SQL Import (DDL) -->
+    <div id="modal-import" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-file-import text-blue-400 text-lg"></i>
+                    <h3 class="font-bold text-slate-100 text-lg">Імпорт SQL (Створення таблиць)</h3>
+                </div>
+                <button class="btn-close-modal text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <div class="p-5 overflow-y-auto space-y-4 flex-1">
+                <p class="text-sm text-slate-400">
+                    Вставити SQL-код із командами <code class="text-blue-400">CREATE TABLE</code>. Таблиці будуть створені порожніми і готовими до заповнення через інтерфейс.
+                </p>
+
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-xs font-semibold text-slate-300">SQL Скрипт (DDL)</label>
+                        <button id="btn-insert-sample-ddl" class="text-xs text-blue-400 hover:underline">Вставити приклад</button>
+                    </div>
+                    <textarea id="import-sql-text" rows="10" class="w-full bg-slate-950 text-blue-300 font-mono text-sm p-3 rounded-xl border border-slate-800 focus:outline-none focus:border-blue-500" placeholder="CREATE TABLE users (&#10;  id INTEGER PRIMARY KEY AUTOINCREMENT,&#10;  name TEXT NOT NULL,&#10;  email TEXT UNIQUE,&#10;  age INTEGER&#10;);"></textarea>
+                </div>
+
+                <div id="import-error-msg" class="hidden p-3 rounded-lg bg-rose-950/50 border border-rose-800/50 text-rose-300 text-xs font-mono"></div>
+            </div>
+
+            <div class="p-4 border-t border-slate-800 bg-slate-900/50 flex justify-end space-x-3">
+                <button class="btn-close-modal bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm font-medium">Скасувати</button>
+                <button id="btn-execute-import" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-2">
+                    <i class="fa-solid fa-check"></i>
+                    <span>Створити Таблиці</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: SQL Export -->
+    <div id="modal-export" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-file-export text-emerald-400 text-lg"></i>
+                    <h3 class="font-bold text-slate-100 text-lg">Експорт SQL (Дані та Структура)</h3>
+                </div>
+                <button class="btn-close-modal text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <div class="p-5 overflow-y-auto space-y-4 flex-1">
+                <div class="flex flex-wrap justify-between items-center gap-2">
+                    <p class="text-sm text-slate-400">
+                        Згенерований SQL код включає створення таблиць та оператори <code class="text-emerald-400">INSERT INTO</code> для заповнення даними.
+                    </p>
+                    <div class="flex items-center space-x-2 bg-slate-950 p-1 rounded-lg border border-slate-800">
+                        <label class="text-xs text-slate-400 px-2">Режим:</label>
+                        <select id="export-mode-select" class="bg-slate-800 text-xs text-slate-200 rounded px-2 py-1 outline-none">
+                            <option value="full">Повний скрипт (CREATE + INSERT)</option>
+                            <option value="inserts_only">Тільки INSERT оператори</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="relative">
+                    <textarea id="export-sql-text" readonly rows="12" class="w-full bg-slate-950 text-emerald-300 font-mono text-xs p-4 rounded-xl border border-slate-800 focus:outline-none focus:border-emerald-500 selection:bg-emerald-900"></textarea>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-slate-800 bg-slate-900/50 flex justify-between items-center">
+                <span id="export-stat-info" class="text-xs text-slate-400 font-mono">0 таблиць, 0 рядків</span>
+                <div class="flex space-x-3">
+                    <button id="btn-copy-export" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-lg text-sm font-medium border border-slate-700 transition flex items-center space-x-2">
+                        <i class="fa-regular fa-copy"></i>
+                        <span>Копіювати SQL</span>
+                    </button>
+                    <button id="btn-download-sql" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-2">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Завантажити .sql</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: Add Record (Dynamic Form) -->
+    <div id="modal-add-record" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-plus-circle text-emerald-400 text-lg"></i>
+                    <h3 id="modal-record-title" class="font-bold text-slate-100 text-lg">Додати запис</h3>
+                </div>
+                <button class="btn-close-modal text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <form id="form-add-record" class="flex-1 overflow-y-auto p-5 space-y-4">
+                <div id="dynamic-form-fields" class="space-y-4">
+                    <!-- Dynamic field inputs generated via JS -->
+                </div>
+            </form>
+
+            <div class="p-4 border-t border-slate-800 bg-slate-900/50 flex justify-end space-x-3">
+                <button type="button" class="btn-close-modal bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm font-medium">Скасувати</button>
+                <button id="btn-save-record" type="button" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-2">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>Зберегти Об'єкт</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: Presets Selection -->
+    <div id="modal-presets" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-400 text-lg"></i>
+                    <h3 class="font-bold text-slate-100 text-lg">Готові шаблони баз даних</h3>
+                </div>
+                <button class="btn-close-modal text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <div class="p-5 space-y-3">
+                <p class="text-sm text-slate-400 mb-2">Оберіть готовий шаблон для створення структури баз даних з кількома таблицями:</p>
+
+                <!-- Preset 1 -->
+                <div onclick="loadPreset('shop')" class="p-4 rounded-xl border border-slate-800 hover:border-blue-500/50 bg-slate-950 hover:bg-slate-800/50 cursor-pointer transition flex items-start space-x-4 group">
+                    <div class="bg-blue-500/10 text-blue-400 p-3 rounded-lg border border-blue-500/20 group-hover:scale-105 transition">
+                        <i class="fa-solid fa-cart-shopping text-xl"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-slate-200 group-hover:text-blue-400 transition">Інтернет-Магазин (E-Commerce)</h4>
+                        <p class="text-xs text-slate-400 mt-1">Таблиці: <code class="text-slate-300">users</code> (користувачі), <code class="text-slate-300">products</code> (товари), <code class="text-slate-300">orders</code> (замовлення).</p>
+                    </div>
+                </div>
+
+                <!-- Preset 2 -->
+                <div onclick="loadPreset('library')" class="p-4 rounded-xl border border-slate-800 hover:border-emerald-500/50 bg-slate-950 hover:bg-slate-800/50 cursor-pointer transition flex items-start space-x-4 group">
+                    <div class="bg-emerald-500/10 text-emerald-400 p-3 rounded-lg border border-emerald-500/20 group-hover:scale-105 transition">
+                        <i class="fa-solid fa-book text-xl"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-slate-200 group-hover:text-emerald-400 transition">Електронна Бібліотека</h4>
+                        <p class="text-xs text-slate-400 mt-1">Таблиці: <code class="text-slate-300">authors</code> (автори), <code class="text-slate-300">books</code> (книги), <code class="text-slate-300">loans</code> (видача книг).</p>
+                    </div>
+                </div>
+
+                <!-- Preset 3 -->
+                <div onclick="loadPreset('university')" class="p-4 rounded-xl border border-slate-800 hover:border-purple-500/50 bg-slate-950 hover:bg-slate-800/50 cursor-pointer transition flex items-start space-x-4 group">
+                    <div class="bg-purple-500/10 text-purple-400 p-3 rounded-lg border border-purple-500/20 group-hover:scale-105 transition">
+                        <i class="fa-solid fa-graduation-cap text-xl"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-slate-200 group-hover:text-purple-400 transition">Університет / Студенти</h4>
+                        <p class="text-xs text-slate-400 mt-1">Таблиці: <code class="text-slate-300">students</code> (студенти), <code class="text-slate-300">courses</code> (курси), <code class="text-slate-300">grades</code> (оцінки).</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-slate-800 bg-slate-900/50 flex justify-end">
+                <button class="btn-close-modal bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm font-medium">Закрити</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <script>
+        // Global Application State
+        let db = null; // SQLite WASM database instance
+        let SQL_ENGINE = null; // SQL.js Library Engine Instance
+        let activeTableName = null;
+        let dbTables = {}; // Schema cache: { tableName: [ {cid, name, type, notnull, dflt_value, pk} ] }
+
+        // Sample DDL presets
+        const PRESETS = {
+            shop: `-- Таблиця користувачів
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    full_name TEXT NOT NULL,
+    email TEXT UNIQUE,
+    balance REAL DEFAULT 0.00
+);
+
+-- Таблиця товарів
+CREATE TABLE products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    price REAL NOT NULL,
+    stock INTEGER DEFAULT 10
+);
+
+-- Таблиця замовлень
+CREATE TABLE orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    quantity INTEGER DEFAULT 1,
+    order_date TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);`,
+
+            library: `-- Таблиця авторів
+CREATE TABLE authors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    country TEXT,
+    birth_year INTEGER
+);
+
+-- Таблиця книг
+CREATE TABLE books (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    author_id INTEGER NOT NULL,
+    genre TEXT,
+    publication_year INTEGER,
+    FOREIGN KEY (author_id) REFERENCES authors(id)
+);
+
+-- Видача книг
+CREATE TABLE loans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    book_id INTEGER NOT NULL,
+    reader_name TEXT NOT NULL,
+    borrow_date TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (book_id) REFERENCES books(id)
+);`,
+
+            university: `-- Таблиця студентів
+CREATE TABLE students (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    group_code TEXT
+);
+
+-- Таблиця курсів
+CREATE TABLE courses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    course_name TEXT NOT NULL,
+    credits INTEGER DEFAULT 3
+);
+
+-- Таблиця оцінок
+CREATE TABLE grades (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER NOT NULL,
+    course_id INTEGER NOT NULL,
+    grade INTEGER CHECK (grade >= 1 AND grade <= 100),
+    FOREIGN KEY (student_id) REFERENCES students(id),
+    FOREIGN KEY (course_id) REFERENCES courses(id)
+);`
+        };
+
+        // Initialize SQLite Engine
+        async function initDatabase() {
+            try {
+                SQL_ENGINE = await initSqlJs({
+                    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+                });
+                db = new SQL_ENGINE.Database();
+                // Enable foreign key constraints in SQLite
+                db.run("PRAGMA foreign_keys = ON;");
+                showToast("SQLite Engine успішно ініціалізовано!", "success");
+                refreshTableList();
+            } catch (err) {
+                console.error("Помилка ініціалізації SQL.js:", err);
+                const errMsg = (err && err.message) ? err.message : String(err || "Невідома помилка");
+                showToast(`Помилка завантаження SQLite модуля: ${errMsg}`, "error");
+            }
+        }
+
+        // Get list of tables from SQLite metadata
+        function fetchTableNames() {
+            if (!db) return [];
+            try {
+                const res = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';");
+                if (res.length > 0) {
+                    return res[0].values.map(row => row[0]);
+                }
+            } catch (e) {
+                console.error("Error fetching tables:", e);
+            }
+            return [];
+        }
+
+        // Get column details for a given table
+        function getTableColumns(tableName) {
+            if (!db) return [];
+            try {
+                const res = db.exec(`PRAGMA table_info("${tableName}");`);
+                if (res.length > 0) {
+                    return res[0].values.map(row => ({
+                        cid: row[0],
+                        name: row[1],
+                        type: (row[2] || 'TEXT').toUpperCase(),
+                        notnull: row[3] === 1,
+                        dflt_value: row[4],
+                        pk: row[5] === 1
+                    }));
+                }
+            } catch (e) {
+                console.error(`Error fetching column info for ${tableName}:`, e);
+            }
+            return [];
+        }
+
+        // Get row count for a table
+        function getTableRowCount(tableName) {
+            if (!db) return 0;
+            try {
+                const res = db.exec(`SELECT COUNT(*) FROM "${tableName}";`);
+                if (res.length > 0 && res[0].values.length > 0) {
+                    return res[0].values[0][0];
+                }
+            } catch (e) {
+                return 0;
+            }
+            return 0;
+        }
+
+        // Refresh sidebar list of tables
+        function refreshTableList() {
+            const tableNames = fetchTableNames();
+            const listEl = document.getElementById('table-list');
+            document.getElementById('table-count').innerText = tableNames.length;
+
+            dbTables = {};
+            tableNames.forEach(name => {
+                dbTables[name] = getTableColumns(name);
+            });
+
+            if (tableNames.length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-8 text-slate-500 text-sm px-4">
+                        <i class="fa-solid fa-database text-3xl mb-2 opacity-40"></i>
+                        <p>База даних порожня.</p>
+                        <p class="text-xs mt-1 text-slate-600">Натисніть "Імпорт SQL" або завантажте шаблон.</p>
+                    </div>
+                `;
+                activeTableName = null;
+                renderEmptyState();
+                return;
+            }
+
+            listEl.innerHTML = '';
+            tableNames.forEach(tableName => {
+                const count = getTableRowCount(tableName);
+                const isActive = tableName === activeTableName;
+
+                const itemBtn = document.createElement('button');
+                itemBtn.className = `w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition flex items-center justify-between group ${
+                    isActive 
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' 
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`;
+
+                itemBtn.onclick = () => selectTable(tableName);
+                itemBtn.innerHTML = `
+                    <div class="flex items-center space-x-2.5 truncate">
+                        <i class="fa-solid fa-table ${isActive ? 'text-white' : 'text-blue-400'} group-hover:scale-110 transition"></i>
+                        <span class="truncate">${tableName}</span>
+                    </div>
+                    <span class="text-xs px-2 py-0.5 rounded-full ${
+                        isActive ? 'bg-blue-700 text-blue-100' : 'bg-slate-800 text-slate-400 group-hover:bg-slate-700'
+                    }">${count}</span>
+                `;
+                listEl.appendChild(itemBtn);
+            });
+
+            // If active table is deleted or not selected, pick first
+            if (!activeTableName || !tableNames.includes(activeTableName)) {
+                selectTable(tableNames[0]);
+            } else {
+                selectTable(activeTableName);
+            }
+        }
+
+        // Select and render a table
+        function selectTable(tableName) {
+            activeTableName = tableName;
+            
+            // Re-render sidebar active highlight
+            const listButtons = document.querySelectorAll('#table-list button');
+            const tableNames = fetchTableNames();
+            
+            tableNames.forEach((name, idx) => {
+                if (listButtons[idx]) {
+                    const isActive = name === tableName;
+                    listButtons[idx].className = `w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition flex items-center justify-between group ${
+                        isActive 
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' 
+                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    }`;
+                }
+            });
+
+            const columns = dbTables[tableName] || [];
+            const count = getTableRowCount(tableName);
+
+            // Update Header
+            document.getElementById('current-table-title').querySelector('span').innerText = tableName;
+            document.getElementById('current-table-badge').innerText = `${count} запис(ів)`;
+            document.getElementById('table-actions').classList.remove('hidden');
+
+            const schemaText = columns.map(c => `${c.name} (${c.type}${c.pk ? ' PK' : ''})`).join(', ');
+            document.getElementById('current-table-schema-preview').innerText = `Схема: ${schemaText}`;
+
+            renderTableDataGrid(tableName, columns);
+        }
+
+        // Render Data Grid with Rows & Deletion
+        function renderTableDataGrid(tableName, columns) {
+            const container = document.getElementById('data-table-wrapper');
+            container.className = "bg-slate-900 rounded-xl border border-slate-800 shadow-xl overflow-hidden w-full flex flex-col";
+
+            let rows = [];
+            try {
+                const res = db.exec(`SELECT * FROM "${tableName}";`);
+                if (res.length > 0) {
+                    rows = res[0].values;
+                }
+            } catch (e) {
+                console.error("Error reading table data:", e);
+            }
+
+            if (columns.length === 0) {
+                container.innerHTML = `<div class="p-8 text-center text-slate-500">Помилка читання структури таблиці.</div>`;
+                return;
+            }
+
+            // Build HTML Table
+            let tableHtml = `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-950/80 border-b border-slate-800 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                <th class="p-3 w-12 text-center">#</th>
+            `;
+
+            columns.forEach(col => {
+                tableHtml += `
+                    <th class="p-3">
+                        <div class="flex items-center space-x-1.5">
+                            <span class="text-slate-200">${col.name}</span>
+                            <span class="text-[10px] text-blue-400 font-mono normal-case bg-blue-950/50 px-1.5 py-0.5 rounded border border-blue-800/40">${col.type}</span>
+                            ${col.pk ? '<i class="fa-solid fa-key text-amber-400 text-xs" title="Primary Key"></i>' : ''}
+                        </div>
+                    </th>
+                `;
+            });
+
+            tableHtml += `
+                                <th class="p-3 text-right w-20">Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/60 text-sm font-mono">
+            `;
+
+            if (rows.length === 0) {
+                tableHtml += `
+                    <tr>
+                        <td colspan="${columns.length + 2}" class="p-8 text-center text-slate-500 font-sans">
+                            <i class="fa-solid font-normal fa-folder-open text-3xl mb-2 opacity-40"></i>
+                            <p class="text-sm">Таблиця поки що не містить жодного запису.</p>
+                            <button onclick="openAddRecordModal()" class="mt-3 text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg transition font-medium inline-flex items-center gap-1.5">
+                                <i class="fa-solid fa-plus"></i> Додати перший запис
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                rows.forEach((row, rowIndex) => {
+                    tableHtml += `<tr class="hover:bg-slate-800/40 transition">`;
+                    tableHtml += `<td class="p-3 text-center text-xs text-slate-500 font-sans">${rowIndex + 1}</td>`;
+
+                    row.forEach((cellVal, colIdx) => {
+                        const valDisplay = cellVal === null 
+                            ? `<span class="text-slate-600 italic">NULL</span>` 
+                            : escapeHtml(String(cellVal));
+                        tableHtml += `<td class="p-3 text-slate-300 max-w-xs truncate">${valDisplay}</td>`;
+                    });
+
+                    // PK Value for Row Deletion
+                    const pkColIndex = columns.findIndex(c => c.pk);
+                    const deleteCondition = pkColIndex !== -1 
+                        ? `${columns[pkColIndex].name} = ${typeof row[pkColIndex] === 'string' ? `'${row[pkColIndex]}'` : row[pkColIndex]}`
+                        : `${columns[0].name} = ${typeof row[0] === 'string' ? `'${row[0]}'` : row[0]}`;
+
+                    tableHtml += `
+                        <td class="p-3 text-right">
+                            <button onclick="deleteRecord('${tableName}', \`${deleteCondition}\`)" class="text-slate-500 hover:text-rose-400 p-1 transition" title="Видалити запис">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    `;
+                    tableHtml += `</tr>`;
+                });
+            }
+
+            tableHtml += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            container.innerHTML = tableHtml;
+        }
+
+        // Fallback state when no table is present
+        function renderEmptyState() {
+            document.getElementById('current-table-title').querySelector('span').innerText = "Виберіть таблицю";
+            document.getElementById('current-table-badge').innerText = "0 записів";
+            document.getElementById('current-table-schema-preview').innerText = "База даних порожня";
+            document.getElementById('table-actions').classList.add('hidden');
+
+            const container = document.getElementById('data-table-wrapper');
+            container.className = "bg-slate-900 rounded-xl border border-slate-800 shadow-xl overflow-hidden min-h-[250px] flex flex-col justify-center items-center text-slate-500";
+            container.innerHTML = `
+                <i class="fa-solid fa-database text-4xl mb-3 text-slate-700"></i>
+                <p class="text-base font-medium text-slate-400">Немає створених таблиць</p>
+                <p class="text-xs text-slate-600 mt-1 max-w-sm text-center">Скористайтеся кнопкою "Імпорт SQL (DDL)" у верхньому меню або виберіть "Шаблони БД" для швидкого старту.</p>
+            `;
+        }
+
+        // Open Modal to insert new row into active table
+        function openAddRecordModal() {
+            if (!activeTableName || !dbTables[activeTableName]) return;
+
+            const cols = dbTables[activeTableName];
+            const container = document.getElementById('dynamic-form-fields');
+            container.innerHTML = '';
+
+            document.getElementById('modal-record-title').innerText = `Додати запис у "${activeTableName}"`;
+
+            cols.forEach(col => {
+                // Skip AUTOINCREMENT PRIMARY KEY fields (SQLite populates them automatically)
+                if (col.pk && (col.type.includes('INT') || col.type.includes('INTEGER'))) {
+                    const infoDiv = document.createElement('div');
+                    infoDiv.className = "bg-slate-950 p-2.5 rounded-lg border border-slate-800/80 text-xs text-slate-400 flex items-center justify-between";
+                    infoDiv.innerHTML = `
+                        <span>Поле <code class="text-amber-400 font-bold">${col.name}</code> (PRIMARY KEY)</span>
+                        <span class="text-slate-500 italic">Генерується автоінкрементом</span>
+                    `;
+                    container.appendChild(infoDiv);
+                    return;
+                }
+
+                const fieldGroup = document.createElement('div');
+                fieldGroup.className = "space-y-1.5";
+
+                const label = document.createElement('label');
+                label.className = "block text-xs font-medium text-slate-300 flex items-center justify-between";
+                label.innerHTML = `
+                    <span>${col.name} ${col.notnull ? '<span class="text-rose-400">*</span>' : ''}</span>
+                    <span class="text-[10px] text-slate-500 font-mono">${col.type}</span>
+                `;
+
+                let input;
+                if (col.type.includes('TEXT') && col.name.toLowerCase().includes('desc')) {
+                    input = document.createElement('textarea');
+                    input.rows = 2;
+                } else {
+                    input = document.createElement('input');
+                    if (col.type.includes('INT')) {
+                        input.type = 'number';
+                        input.step = '1';
+                    } else if (col.type.includes('REAL') || col.type.includes('FLOAT') || col.type.includes('NUMERIC')) {
+                        input.type = 'number';
+                        input.step = '0.01';
+                    } else if (col.type.includes('DATE') || col.type.includes('TIME')) {
+                        input.type = 'datetime-local';
+                    } else {
+                        input.type = 'text';
+                    }
+                }
+
+                input.name = col.name;
+                input.dataset.type = col.type;
+                input.dataset.notnull = col.notnull;
+                input.className = "w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/80 transition";
+                
+                if (col.dflt_value) {
+                    input.placeholder = `За замовчуванням: ${col.dflt_value}`;
+                }
+
+                fieldGroup.appendChild(label);
+                fieldGroup.appendChild(input);
+                container.appendChild(fieldGroup);
+            });
+
+            document.getElementById('modal-add-record').classList.remove('hidden');
+        }
+
+        // Save row object to active SQLite Table
+        function saveRecord() {
+            if (!activeTableName || !dbTables[activeTableName]) return;
+
+            const cols = dbTables[activeTableName];
+            const form = document.getElementById('form-add-record');
+            const inputs = form.querySelectorAll('input, textarea');
+
+            const insertCols = [];
+            const insertVals = [];
+            const placeholders = [];
+
+            let validationFailed = false;
+
+            inputs.forEach(input => {
+                const colName = input.name;
+                const rawVal = input.value.trim();
+                const isNotNull = input.dataset.notnull === 'true';
+
+                if (isNotNull && rawVal === '') {
+                    showToast(`Поле "${colName}" є обов'язковим для заповнення!`, "error");
+                    validationFailed = true;
+                    return;
+                }
+
+                if (rawVal !== '') {
+                    insertCols.push(`"${colName}"`);
+                    placeholders.push('?');
+
+                    if (input.dataset.type.includes('INT')) {
+                        insertVals.push(parseInt(rawVal, 10));
+                    } else if (input.dataset.type.includes('REAL') || input.dataset.type.includes('FLOAT') || input.dataset.type.includes('NUMERIC')) {
+                        insertVals.push(parseFloat(rawVal));
+                    } else {
+                        insertVals.push(rawVal);
+                    }
+                }
+            });
+
+            if (validationFailed) return;
+
+            if (insertCols.length === 0) {
+                showToast("Введіть хоча б одне значення для запису!", "error");
+                return;
+            }
+
+            const sql = `INSERT INTO "${activeTableName}" (${insertCols.join(', ')}) VALUES (${placeholders.join(', ')});`;
+
+            try {
+                db.run(sql, insertVals);
+                showToast(`Об'єкт успішно додано в "${activeTableName}"!`, "success");
+                document.getElementById('modal-add-record').classList.add('hidden');
+                refreshTableList();
+            } catch (err) {
+                console.error("SQL Insert Error:", err);
+                const errMsg = (err && err.message) ? err.message : String(err || "Помилка синтаксису");
+                showToast(`Помилка SQL: ${errMsg}`, "error");
+            }
+        }
+
+        // Delete a specific row
+        function deleteRecord(tableName, whereClause) {
+            try {
+                db.run(`DELETE FROM "${tableName}" WHERE ${whereClause};`);
+                showToast("Запис успішно видалено!", "success");
+                refreshTableList();
+            } catch (e) {
+                const errMsg = (e && e.message) ? e.message : String(e || "Помилка видалення");
+                showToast(`Помилка видалення: ${errMsg}`, "error");
+            }
+        }
+
+        // Drop Table
+        function dropCurrentTable() {
+            if (!activeTableName) return;
+            try {
+                db.run(`DROP TABLE "${activeTableName}";`);
+                showToast(`Таблицю "${activeTableName}" видалено!`, "success");
+                activeTableName = null;
+                refreshTableList();
+            } catch (e) {
+                const errMsg = (e && e.message) ? e.message : String(e || "Помилка видалення");
+                showToast(`Помилка видалення таблиці: ${errMsg}`, "error");
+            }
+        }
+
+        // Delete a specific row
+        function deleteRecord(tableName, whereClause) {
+            try {
+                db.run(`DELETE FROM "${tableName}" WHERE ${whereClause};`);
+                showToast("Запис успішно видалено!", "success");
+                refreshTableList();
+            } catch (e) {
+                showToast(`Помилка видалення: ${e.message}`, "error");
+            }
+        }
+
+        // Drop Table
+        function dropCurrentTable() {
+            if (!activeTableName) return;
+            try {
+                db.run(`DROP TABLE "${activeTableName}";`);
+                showToast(`Таблицю "${activeTableName}" видалено!`, "success");
+                activeTableName = null;
+                refreshTableList();
+            } catch (e) {
+                showToast(`Помилка видалення таблиці: ${e.message}`, "error");
+            }
+        }
+
+        // Generate SQL code (CREATE + INSERT) for Export
+        function generateExportSQL(mode = 'full') {
+            const tableNames = fetchTableNames();
+            if (tableNames.length === 0) {
+                return "-- База даних порожня. Створіть таблиці та додайте записи.";
+            }
+
+            let exportScript = `PRAGMA foreign_keys = ON;\n\n`;
+
+            let totalRowsCount = 0;
+
+            tableNames.forEach(tableName => {
+                const cols = dbTables[tableName] || [];
+
+                // 1. DDL Create Table Statement
+                if (mode === 'full') {
+                    try {
+                        const res = db.exec(`SELECT sql FROM sqlite_master WHERE type='table' AND name='${tableName}';`);
+                        if (res.length > 0 && res[0].values.length > 0) {
+                            exportScript += `-- Структура таблиці: ${tableName}\n`;
+                            exportScript += `${res[0].values[0][0]};\n\n`;
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
+
+                // 2. DML Insert Statements
+                try {
+                    const res = db.exec(`SELECT * FROM "${tableName}";`);
+                    if (res.length > 0 && res[0].values.length > 0) {
+                        const colNames = res[0].columns.map(c => `"${c}"`).join(', ');
+                        const rows = res[0].values;
+                        totalRowsCount += rows.length;
+
+                        exportScript += `-- Дані для таблиці: ${tableName} (${rows.length} записів)\n`;
+
+                        rows.forEach(row => {
+                            const formattedVals = row.map(val => {
+                                if (val === null) return 'NULL';
+                                if (typeof val === 'number') return val;
+                                return `'${String(val).replace(/'/g, "''")}'`;
+                            }).join(', ');
+
+                            exportScript += `INSERT INTO "${tableName}" (${colNames}) VALUES (${formattedVals});\n`;
+                        });
+                        exportScript += `\n`;
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            });
+
+            document.getElementById('export-stat-info').innerText = `${tableNames.length} таблиць, ${totalRowsCount} записів`;
+            return exportScript;
+        }
+
+        // Open Export Modal
+        function openExportModal() {
+            const mode = document.getElementById('export-mode-select').value;
+            const sqlText = generateExportSQL(mode);
+            document.getElementById('export-sql-text').value = sqlText;
+            document.getElementById('modal-export').classList.remove('hidden');
+        }
+
+        // Execute DDL Import
+        function executeImportSQL() {
+            const sql = document.getElementById('import-sql-text').value.trim();
+            const errBox = document.getElementById('import-error-msg');
+            errBox.classList.add('hidden');
+
+            if (!sql) {
+                errBox.innerText = "Будь ласка, введіть SQL код для створення таблиць!";
+                errBox.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                db.exec(sql);
+                showToast("SQL Скрипт успішно виконано!", "success");
+                document.getElementById('modal-import').classList.add('hidden');
+                refreshTableList();
+            } catch (err) {
+                const errMsg = (err && err.message) ? err.message : String(err || "Некоректний SQL синтаксис");
+                errBox.innerText = `Помилка SQLite: ${errMsg}`;
+                errBox.classList.remove('hidden');
+            }
+        }
+
+        // Load DB Preset
+        function loadPreset(presetKey) {
+            if (!PRESETS[presetKey] || !SQL_ENGINE) return;
+            try {
+                // Clear existing db
+                if (db) db.close();
+                db = new SQL_ENGINE.Database();
+                db.run("PRAGMA foreign_keys = ON;");
+
+                db.exec(PRESETS[presetKey]);
+                showToast("Шаблон бази даних успішно завантажено!", "success");
+                document.getElementById('modal-presets').classList.add('hidden');
+                refreshTableList();
+            } catch (err) {
+                const errMsg = (err && err.message) ? err.message : String(err || "Помилка завантаження");
+                showToast(`Помилка завантаження шаблону: ${errMsg}`, "error");
+            }
+        }
+
+        // Execute query in SQL Playground Console
+        function runCustomQuery() {
+            const query = document.getElementById('sql-query-input').value.trim();
+            const outputEl = document.getElementById('query-result-output');
+
+            if (!query) {
+                outputEl.innerHTML = `<span class="text-amber-400">Введіть SQL запит для виконання.</span>`;
+                return;
+            }
+
+            try {
+                const res = db.exec(query);
+                if (res.length === 0) {
+                    outputEl.innerHTML = `<div class="p-3 bg-emerald-950/40 border border-emerald-800/50 rounded-lg text-emerald-300">
+                        <i class="fa-solid fa-check-circle mr-2"></i>Запит виконано успішно. (Рядків не повернуто)
+                    </div>`;
+                    refreshTableList();
+                    return;
+                }
+
+                const cols = res[0].columns;
+                const rows = res[0].values;
+
+                let tableHtml = `
+                    <div class="mb-2 text-xs text-slate-400 font-sans">Отримано записів: ${rows.length}</div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse border border-slate-800">
+                            <thead>
+                                <tr class="bg-slate-950 text-emerald-400 border-b border-slate-800">
+                `;
+                cols.forEach(c => tableHtml += `<th class="p-2 border border-slate-800">${c}</th>`);
+                tableHtml += `</tr></thead><tbody>`;
+
+                rows.forEach(r => {
+                    tableHtml += `<tr class="hover:bg-slate-800/50">`;
+                    r.forEach(v => tableHtml += `<td class="p-2 border border-slate-800 text-slate-300">${v === null ? 'NULL' : escapeHtml(String(v))}</td>`);
+                    tableHtml += `</tr>`;
+                });
+
+                tableHtml += `</tbody></table></div>`;
+                outputEl.innerHTML = tableHtml;
+            } catch (err) {
+                const errMsg = (err && err.message) ? err.message : String(err || "Некоректний запит");
+                outputEl.innerHTML = `<div class="p-3 bg-rose-950/40 border border-rose-800/50 rounded-lg text-rose-300">
+                    <i class="fa-solid fa-triangle-exclamation mr-2"></i><strong>Помилка SQL:</strong> ${errMsg}
+                </div>`;
+            }
+        }
+
+        function setSampleQuery(type) {
+            const tables = fetchTableNames();
+            const t1 = tables[0] || 'users';
+            const t2 = tables[1] || 'orders';
+
+            if (type === 'SELECT') {
+                document.getElementById('sql-query-input').value = `SELECT * FROM "${t1}";`;
+            } else if (type === 'JOIN') {
+                document.getElementById('sql-query-input').value = `SELECT * FROM "${t1}" JOIN "${t2}" ON ${t1}.id = ${t2}.${t1.slice(0, -1)}_id;`;
+            } else if (type === 'COUNT') {
+                document.getElementById('sql-query-input').value = `SELECT COUNT(*) AS total_records FROM "${t1}";`;
+            }
+        }
+
+        // Utility: Show Toast Notification
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+
+            const bgClass = type === 'success' 
+                ? 'bg-emerald-900/90 border-emerald-700 text-emerald-100' 
+                : type === 'error' 
+                ? 'bg-rose-900/90 border-rose-700 text-rose-100' 
+                : 'bg-slate-800/90 border-slate-700 text-slate-100';
+
+            const iconClass = type === 'success' 
+                ? 'fa-circle-check text-emerald-400' 
+                : type === 'error' 
+                ? 'fa-circle-xmark text-rose-400' 
+                : 'fa-info-circle text-blue-400';
+
+            toast.className = `pointer-events-auto border px-4 py-3 rounded-xl shadow-2xl backdrop-blur-md flex items-center space-x-3 text-sm transition transform translate-y-2 opacity-0 duration-200 ${bgClass}`;
+            toast.innerHTML = `
+                <i class="fa-solid ${iconClass} text-lg"></i>
+                <span>${message}</span>
+            `;
+
+            toastContainer.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // Utility: Escape HTML
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // DOM Event Listeners Binding
+        window.addEventListener('DOMContentLoaded', () => {
+            initDatabase();
+
+            // Modals close triggers
+            document.querySelectorAll('.btn-close-modal').forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll('[id^="modal-"]').forEach(m => m.classList.add('hidden'));
+                };
+            });
+
+            // Modal Open Triggers
+            document.getElementById('btn-import-modal').onclick = () => {
+                document.getElementById('import-error-msg').classList.add('hidden');
+                document.getElementById('modal-import').classList.remove('hidden');
+            };
+
+            document.getElementById('btn-quick-add-table').onclick = () => {
+                document.getElementById('import-error-msg').classList.add('hidden');
+                document.getElementById('modal-import').classList.remove('hidden');
+            };
+
+            document.getElementById('btn-export-modal').onclick = openExportModal;
+            document.getElementById('btn-presets').onclick = () => {
+                document.getElementById('modal-presets').classList.remove('hidden');
+            };
+
+            document.getElementById('btn-add-record').onclick = openAddRecordModal;
+            document.getElementById('btn-save-record').onclick = saveRecord;
+            document.getElementById('btn-execute-import').onclick = executeImportSQL;
+
+            document.getElementById('btn-insert-sample-ddl').onclick = () => {
+                document.getElementById('import-sql-text').value = PRESETS.shop;
+            };
+
+            document.getElementById('export-mode-select').onchange = () => {
+                const mode = document.getElementById('export-mode-select').value;
+                document.getElementById('export-sql-text').value = generateExportSQL(mode);
+            };
+
+            // Copy to Clipboard fallback
+            document.getElementById('btn-copy-export').onclick = () => {
+                const text = document.getElementById('export-sql-text');
+                text.select();
+                document.execCommand('copy');
+                showToast("SQL-код скопійовано у буфер обміну!", "success");
+            };
+
+            // Download .sql file
+            document.getElementById('btn-download-sql').onclick = () => {
+                const text = document.getElementById('export-sql-text').value;
+                const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `database_dump_${Date.now()}.sql`;
+                link.click();
+                showToast("Скрипт .sql завантажено!", "success");
+            };
+
+            // Drop Table
+            document.getElementById('btn-drop-table').onclick = () => {
+                if (activeTableName) {
+                    dropCurrentTable();
+                }
+            };
+
+            // Reset DB
+            document.getElementById('btn-reset-db').onclick = () => {
+                try {
+                    if (db) db.close();
+                    if (SQL_ENGINE) {
+                        db = new SQL_ENGINE.Database();
+                        db.run("PRAGMA foreign_keys = ON;");
+                    }
+                    activeTableName = null;
+                    refreshTableList();
+                    showToast("Базу даних повністю очищено!", "info");
+                } catch (e) {
+                    console.error(e);
+                }
+            };
+
+            // Toggle SQL Runner Console View
+            const runnerView = document.getElementById('view-sql-runner');
+            const dataView = document.getElementById('view-table-data');
+
+            document.getElementById('btn-toggle-sql-runner').onclick = () => {
+                runnerView.classList.remove('hidden');
+                dataView.classList.add('hidden');
+            };
+
+            document.getElementById('btn-close-sql-runner').onclick = () => {
+                runnerView.classList.add('hidden');
+                dataView.classList.remove('hidden');
+            };
+
+            document.getElementById('btn-run-query').onclick = runCustomQuery;
+        });
+    </script>
+</body>
+</html>
