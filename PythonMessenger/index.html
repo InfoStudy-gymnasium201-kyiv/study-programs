@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Python Messenger</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Pyodide WASM Python Engine -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace'],
+                    },
+                    colors: {
+                        telegram: {
+                            bg: '#0e1621',
+                            header: '#17212b',
+                            card: '#182533',
+                            bubbleIn: '#182533',
+                            bubbleOut: '#2b5278',
+                            accent: '#2aabee',
+                            accentHover: '#229ed9',
+                            success: '#4ade80'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        /* Clean, single-element code textarea - no overlay mismatches */
+        .code-textarea-native {
+            width: 100%;
+            height: 100%;
+            font-family: 'Fira Code', monospace !important;
+            font-size: 0.9rem !important;
+            line-height: 1.6rem !important;
+            background-color: #0d1117;
+            color: #38bdf8;
+            padding: 1rem !important;
+            border: none;
+            outline: none;
+            resize: none;
+            white-space: pre;
+            overflow-x: auto;
+            tab-size: 4;
+            -moz-tab-size: 4;
+            caret-color: #4ade80;
+        }
+
+        .chat-bg {
+            background-color: #0e1621;
+            background-image: radial-gradient(#17212b 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased h-screen flex justify-center items-center overflow-hidden">
+
+    <!-- Mobile Emulator Wrapper -->
+    <div class="w-full max-w-md h-full md:h-[92vh] bg-telegram-bg flex flex-col shadow-2xl relative border-0 md:border md:border-slate-800 md:rounded-3xl overflow-hidden">
+
+        <!-- Top Navigation Header -->
+        <header id="appHeader" class="bg-telegram-header px-4 py-3 flex items-center justify-between border-b border-slate-800/60 z-20">
+            <div class="flex items-center gap-3">
+                <button id="backBtn" onclick="showChatList()" class="hidden text-slate-300 hover:text-white p-2 rounded-full hover:bg-slate-800/50 transition-colors">
+                    <i class="fa-solid fa-arrow-left text-lg"></i>
+                </button>
+                <div class="relative">
+                    <div id="headerAvatar" class="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-white shadow-md">
+                        <i class="fa-solid fa-code"></i>
+                    </div>
+                    <span id="pyodideStatusDot" class="absolute bottom-0 right-0 w-3 h-3 bg-amber-500 border-2 border-telegram-header rounded-full" title="Завантаження Python..."></span>
+                </div>
+                <div>
+                    <h1 id="headerTitle" class="font-bold text-sm tracking-wide text-slate-100">Python Ментор</h1>
+                    <p id="headerSubtitle" class="text-xs text-amber-400 font-medium">Завантаження Python WASM...</p>
+                </div>
+            </div>
+
+            <!-- Balance Badge -->
+            <div class="bg-slate-900/80 border border-emerald-500/30 px-3 py-1.5 rounded-full flex items-center gap-2 shadow-inner">
+                <i class="fa-solid fa-wallet text-emerald-400 text-xs"></i>
+                <span id="balanceDisplay" class="font-bold text-emerald-400 text-sm font-mono">0 ₴</span>
+            </div>
+        </header>
+
+        <main class="flex-1 relative overflow-hidden chat-bg">
+            
+            <!-- VIEW 1: Chat List View -->
+            <section id="chatListView" class="absolute inset-0 flex flex-col z-10 transition-transform duration-300">
+                <div class="p-3 bg-telegram-header/50 backdrop-blur border-b border-slate-800/40 flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider px-2">Завдання студентів</div>
+                        <div id="progressText" class="text-xs text-cyan-400 px-2 font-mono">Вирішено: 0 / 10 завдань</div>
+                    </div>
+                    <button onclick="resetGameProgress()" class="text-xs text-slate-500 hover:text-rose-400 px-2 py-1 rounded hover:bg-slate-800 transition-colors" title="Скинути весь прогрес">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+
+                <div id="chatList" class="flex-1 overflow-y-auto divide-y divide-slate-800/40 p-2 space-y-1">
+                    <!-- Dynamic chat cards -->
+                </div>
+            </section>
+
+            <!-- VIEW 2: Chat Room View -->
+            <section id="chatRoomView" class="absolute inset-0 flex flex-col z-0 translate-x-full transition-transform duration-300 bg-telegram-bg">
+                <div id="messagesBox" class="flex-1 overflow-y-auto p-4 space-y-4">
+                    <!-- Dynamic messages -->
+                </div>
+
+                <div id="chatActionBar" class="p-3 bg-telegram-header border-t border-slate-800/80 flex items-center justify-between gap-2">
+                    <span class="text-xs text-slate-400 italic">Натисніть на код у повідомленні, щоб відкрити його в IDE!</span>
+                </div>
+            </section>
+
+            <!-- VIEW 3: IDE Editor View -->
+            <section id="editorView" class="absolute inset-0 z-30 translate-y-full transition-transform duration-300 bg-slate-950 flex flex-col">
+                <div class="bg-slate-900 px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span id="editorTaskTopic" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                            Тема
+                        </span>
+                        <span class="text-xs text-slate-400 font-mono">script.py</span>
+                    </div>
+                    <button onclick="closeEditor()" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+
+                <div class="bg-slate-900/90 border-b border-slate-800 p-3 px-4">
+                    <div class="flex items-start gap-2 text-xs text-slate-300">
+                        <i class="fa-solid fa-circle-info text-cyan-400 mt-0.5"></i>
+                        <p id="editorTaskHint">Виправте помилку в коді нижче.</p>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/50 px-3 py-2 border-b border-slate-800/60 flex items-center justify-between text-xs font-mono">
+                    <div class="flex items-center gap-2">
+                        <button onclick="insertTab()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700 active:scale-95 transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-indent text-cyan-400"></i> +4 Таб
+                        </button>
+                        <button onclick="resetCode()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 active:scale-95 transition-all">
+                            <i class="fa-solid fa-rotate-left mr-1"></i> Скинути
+                        </button>
+                    </div>
+                    <span class="text-emerald-400 text-[11px] font-semibold flex items-center gap-1">
+                        <i class="fa-brands fa-python text-sm"></i> Python 3.11 WASM
+                    </span>
+                </div>
+
+                <div class="flex-1 relative m-3 rounded-xl border border-slate-800 focus-within:border-cyan-500/50 overflow-hidden bg-[#0d1117]">
+                    <textarea id="codeEditor" class="code-textarea-native" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="Пишіть свій код тут..."></textarea>
+                </div>
+
+                <div class="mx-3 mb-3 bg-black/80 rounded-xl border border-slate-800 p-3 h-32 overflow-y-auto font-mono text-xs flex flex-col justify-between">
+                    <div>
+                        <div class="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-1 flex items-center gap-1">
+                            <i class="fa-solid fa-terminal"></i> Консоль виводу (Real Python stdout)
+                        </div>
+                        <pre id="consoleOutput" class="text-slate-300 whitespace-pre-wrap font-mono">Натисніть "Запустити", щоб перевірити код...</pre>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-3">
+                    <button id="runBtn" onclick="runAndTestCode()" class="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-900/30 flex items-center justify-center gap-2 transition-all active:scale-98">
+                        <i class="fa-solid fa-play"></i>
+                        <span id="runBtnText">Запустити та перевірити</span>
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Array of 10 pedagogical Python tasks
+        const TASKS = [
+            {
+                id: 1,
+                studentName: "Анна (1-й курс)",
+                avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80",
+                topic: "Типізація даних",
+                reward: 250,
+                message: "Привіт! Я намагаюся вивести суму віку та надбавки, але Python вибиває TypeError. Чому вони не складаються?",
+                hint: "Помилка додавання рядка (str) до числа (int). Перетвори age на int або зміни запис змінної!",
+                initialCode: `age = "19"\nbonus = 5\ntotal = age + bonus\nprint("Загалом:", total)`,
+                verifyPython: `
+import sys, io
+sys.stdout = io.StringIO()
+
+exec(user_code)
+output = sys.stdout.getvalue().strip()
+
+# Test condition: total must equal 24 as int
+if "Загалом: 24" in output or output == "24":
+    test_passed = True
+    test_msg = "Сума обчислена вірно!"
+else:
+    test_passed = False
+    test_msg = f"Очікувалося 'Загалом: 24', але отримано: '{output}'"
+`
+            },
+            {
+                id: 2,
+                studentName: "Максим (StartUp)",
+                avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
+                topic: "Створення змінних",
+                reward: 300,
+                message: "Хей! Я дав змінній назву 1st-project, але програма видає SyntaxError. Що не так?",
+                hint: "Назви змінних у Python не можуть починатися з цифр і не можуть містити дефіси `-`.",
+                initialCode: `1st-project = "Python Pro"\nprint("Назва:", 1st-project)`,
+                verifyPython: `
+import sys, io
+sys.stdout = io.StringIO()
+
+exec(user_code)
+output = sys.stdout.getvalue().strip()
+
+if "Назва: Python Pro" in output:
+    test_passed = True
+    test_msg = "Змінну перейменовано коректно!"
+else:
+    test_passed = False
+    test_msg = f"Вивід коду: '{output}' не містить 'Назва: Python Pro'"
+`
+            },
+            {
+                id: 3,
+                studentName: "Олена (Дизайн)",
+                avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&auto=format&fit=crop&q=80",
+                topic: "Умови (if/else)",
+                reward: 350,
+                message: "Привіт! Перевіряю, чи студент склав іспит. Якщо балів 50 або більше — він склав. Але Python кричить про SyntaxError!",
+                hint: "Для порівняння використовують `==` або `>=`, а не одне `=` (це оператор присвоєння).",
+                initialCode: `score = 75\nif score = 50:\n    print("Склав!")\nelse:\n    print("Не склав")`,
+                verifyPython: `
+import sys, io
+sys.stdout = io.StringIO()
+
+exec(user_code)
+output = sys.stdout.getvalue().strip()
+
+if "Склав!" in output:
+    test_passed = True
+    test_msg = "Умова спрацювала вірно!"
+else:
+    test_passed = False
+    test_msg = f"Очікувався вивід 'Склав!', але отримано '{output}'"
+`
+            },
+            {
+                id: 4,
+                studentName: "Богдан (GameDev)",
+                avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80",
+                topic: "Цикл while",
+                reward: 400,
+                message: "SOS! Написав цикл для відліку HP від 3 до 1, а він працює безкінечно!",
+                hint: "Зменшуй значення `hp` всередині циклу (наприклад `hp -= 1`), інакше умова `hp > 0` завжди істинна.",
+                initialCode: `hp = 3\nwhile hp > 0:\n    print("Здоров'я:", hp)\n    # Помилка: hp не зменшується!`,
+                verifyPython: `
+import sys, io
+sys.stdout = io.StringIO()
+
+# Use custom local environment to inspect variable evolution
+loc = {}
+exec(user_code, {}, loc)
+output = sys.stdout.getvalue().strip()
+
+if output.count("Здоров'я:") == 3 and "Здоров'я: 1" in output and loc.get('hp', 0) <= 0:
+    test_passed = True
+    test_msg = "Цикл зменшує HP і вчасно зупиняється!"
+else:
+    test_passed = False
+    test_msg = "Цикл має вивести здоров'я 3, 2, 1 та завершитись."
+`
+            },
+            {
+                id: 5,
+                studentName: "Ігор (Data Science)",
+                avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
+                topic: "Створення функцій",
+                reward: 450,
+                message: "Вітаю! Створив функцію для привітання, але отримую IndentationError!",
+                hint: "У Python всі блоки коду всередині `def` мають мати відступи (4 пробіли).",
+                initialCode: `def greet(name):\nprint("Привіт, " + name)\n\ngreet("Олексій")`,
+                verifyPython: `
+import sys, io
+sys.stdout = io.StringIO()
+
+exec(user_code)
+output = sys.stdout.getvalue().strip()
+
+if "Привіт, Олексій" in output:
+    test_passed = True
+    test_msg = "Функція відпрацювала з правильними відступами!"
+else:
+    test_passed = False
+    test_msg = f"Очікувалося 'Привіт, Олексій', отримано '{output}'"
+`
+            },
+            {
+                id: 6,
+                studentName: "Дмитро (QA)",
+                avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
+                topic: "Цикл for і range()",
+                reward: 500,
+                message: "Привіт! Хочу вивести числа від 1 до 5 за допомогою range(), але виводить лише до 4!",
+                hint: "Функція `range(start, stop)` не включає верхню межу `stop`. Щоб вивести 5, вкажи `range(1, 6)`.",
+                initialCode: `for i in range(1, 5):\n    print("Число:", i)`,
+                verifyPython: `
+import sys, io
+sys.stdout = io.StringIO()
+
+exec(user_code)
+output = sys.stdout.getvalue().strip()
+
+if "Число: 5" in output and "Число: 1" in output:
+    test_passed = True
+    test_msg = "Цикл вивів усі числа від 1 до 5!"
+else:
+    test_passed = False
+    test_msg = "Код повинен вивести числа від 1 до 5 включно."
+`
+            },
+            {
+                id: 7,
+                studentName: "Софія (Junior)",
+                avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
+                topic: "Параметри функцій",
+                reward: 550,
+                message: "Допоможи! Функція має множити два числа, але падає з TypeError: missing argument!",
+                hint: "Виклик `multiply(5)` передає лише один аргумент, хоча функція чекає два (`a` та `b`).",
+                initialCode: `def multiply(a, b):\n    return a * b\n\nresult = multiply(5)\nprint("Результат:", result)`,
+                verifyPython: `
+import sys, io
+sys.stdout = io.StringIO()
+
+exec(user_code)
+output = sys.stdout.getvalue().strip()
+
+if "Результат:" in output and not "missing" in output:
+    test_passed = True
+    test_msg = "Передано всі необхідні параметри!"
+else:
+    test_passed = False
+    test_msg = "Передай обидва аргументи у функцію multiply."
+`
+            },
+            {
+                id: 8,
+                studentName: "Тарас (Аналітик)",
+                avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80",
+                topic: "Методи рядків та списків",
+                reward: 600,
+                message: "Привіт! Хочу об'єднати список слів через пробіл, але виникає AttributeError: 'list' object has no attribute 'join'.",
+                hint: "Метод `.join()` викликається у рядка-роздільника, а не у списку: `' '.join(words)`.",
+                initialCode: `words = ["Python", "це", "круто"]\ntext = words.join(" ")\nprint(text)`,
+                verifyPython: `
+import sys, io
+sys.stdout = io.StringIO()
+
+exec(user_code)
+output = sys.stdout.getvalue().strip()
+
+if output == "Python це круто":
+    test_passed = True
+    test_msg = "Метод join викликано вірно!"
+else:
+    test_passed = False
+    test_msg = f"Очікувалося 'Python це круто', але отримано '{output}'"
+`
+            },
+            {
+                id: 9,
+                studentName: "Катерина (Fullstack)",
+                avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80",
+                topic: "Складні умови (and/or)",
+                reward: 700,
+                message: "Хей! Перевіряю знижку: якщо вік < 18 АБО > 60 — є знижка. Для віку 25 пише 'Є знижка', хоча її бути не повинно!",
+                hint: "Число не може бути одночасно і меншим за 18, І більшим за 60. Використовуй `or` замість `and`.",
+                initialCode: `age = 25\nif age < 18 and age > 60:\n    print("Є знижка")\nelse:\n    print("Без знижки")`,
+                verifyPython: `
+import sys, io
+sys.stdout = io.StringIO()
+
+exec(user_code)
+output = sys.stdout.getvalue().strip()
+
+# Verification test suite with multiple age values
+test_env = {}
+exec(user_code, {}, test_env)
+
+if output == "Без знижки":
+    test_passed = True
+    test_msg = "Логічну умову виправлено!"
+else:
+    test_passed = False
+    test_msg = f"Для віку 25 очікується 'Без знижки', але код вивів '{output}'"
+`
+            },
+            {
+                id: 10,
+                studentName: "Артем (Senior)",
+                avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100&auto=format&fit=crop&q=80",
+                topic: "Рекурсія та умови зупинки",
+                reward: 1000,
+                message: "Фінал! Функція для обчислення факторіалу входить у безкінечну рекурсію `RecursionError`!",
+                hint: "Рекурсивна функція вимагає базового випадку для зупинки: `if n <= 1: return 1`.",
+                initialCode: `def factorial(n):\n    # Відсутній базовий випадок зупинки!\n    return n * factorial(n - 1)\n\nprint("Факторіал 5:", factorial(5))`,
+                verifyPython: `
+import sys, io
+sys.stdout = io.StringIO()
+
+exec(user_code)
+output = sys.stdout.getvalue().strip()
+
+if "120" in output and "Факторіал 5:" in output:
+    test_passed = True
+    test_msg = "Факторіал обчислено вірно, рекурсію зупинено!"
+else:
+    test_passed = False
+    test_msg = f"Очікувалося 'Факторіал 5: 120', отримано '{output}'"
+`
+            }
+        ];
+
+        // Application state
+        let state = {
+            balance: 0,
+            completedTasks: [],
+            currentTaskId: null,
+            pyodideLoaded: false
+        };
+
+        let pyodide = null;
+
+        // UI elements references
+        const chatListView = document.getElementById('chatListView');
+        const chatRoomView = document.getElementById('chatRoomView');
+        const editorView = document.getElementById('editorView');
+        const chatList = document.getElementById('chatList');
+        const messagesBox = document.getElementById('messagesBox');
+        const backBtn = document.getElementById('backBtn');
+        const headerTitle = document.getElementById('headerTitle');
+        const headerSubtitle = document.getElementById('headerSubtitle');
+        const headerAvatar = document.getElementById('headerAvatar');
+        const balanceDisplay = document.getElementById('balanceDisplay');
+        const progressText = document.getElementById('progressText');
+        const codeEditor = document.getElementById('codeEditor');
+        const consoleOutput = document.getElementById('consoleOutput');
+        const editorTaskTopic = document.getElementById('editorTaskTopic');
+        const editorTaskHint = document.getElementById('editorTaskHint');
+        const runBtn = document.getElementById('runBtn');
+        const runBtnText = document.getElementById('runBtnText');
+        const pyodideStatusDot = document.getElementById('pyodideStatusDot');
+
+        window.onload = async function() {
+            loadSavedProgress();
+            renderChatList();
+            setupTabHandling();
+            updateBalanceUI();
+
+            // Asynchronously load Pyodide Python Engine
+            try {
+                pyodide = await loadPyodide();
+                state.pyodideLoaded = true;
+                pyodideStatusDot.className = "absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-telegram-header rounded-full";
+                pyodideStatusDot.title = "Python 3.11 Готовий";
+                headerSubtitle.innerText = "Онлайн • Студенти чекають";
+                headerSubtitle.className = "text-xs text-emerald-400 font-medium";
+            } catch (err) {
+                console.error("Помилка завантаження Pyodide:", err);
+                pyodideStatusDot.className = "absolute bottom-0 right-0 w-3 h-3 bg-rose-500 border-2 border-telegram-header rounded-full";
+                headerSubtitle.innerText = "Помилка завантаження Python engine";
+                headerSubtitle.className = "text-xs text-rose-400 font-medium";
+            }
+        };
+
+        function saveProgress() {
+            localStorage.setItem('python_tutor_game_v2', JSON.stringify({
+                balance: state.balance,
+                completedTasks: state.completedTasks
+            }));
+        }
+
+        function loadSavedProgress() {
+            const saved = localStorage.getItem('python_tutor_game_v2');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    state.balance = parsed.balance || 0;
+                    state.completedTasks = parsed.completedTasks || [];
+                } catch(e) {
+                    console.error("Error reading progress from localStorage", e);
+                }
+            }
+        }
+
+        function resetGameProgress() {
+            if (confirm("Скинути весь прогрес і почати спочатку?")) {
+                state.balance = 0;
+                state.completedTasks = [];
+                saveProgress();
+                updateBalanceUI();
+                renderChatList();
+                if (state.currentTaskId) {
+                    showChatList();
+                }
+            }
+        }
+
+        function renderChatList() {
+            chatList.innerHTML = '';
+            progressText.innerText = `Вирішено: ${state.completedTasks.length} / ${TASKS.length} завдань`;
+
+            TASKS.forEach(task => {
+                const isDone = state.completedTasks.includes(task.id);
+                
+                const item = document.createElement('div');
+                item.className = `p-3 rounded-xl flex items-center gap-3 cursor-pointer transition-all hover:bg-slate-800/60 active:scale-98 ${isDone ? 'opacity-75' : ''}`;
+                item.onclick = () => openChat(task.id);
+
+                item.innerHTML = `
+                    <div class="relative">
+                        <img src="${task.avatar}" alt="${task.studentName}" class="w-12 h-12 rounded-full object-cover border-2 ${isDone ? 'border-emerald-500' : 'border-slate-700'}">
+                        ${isDone ? '<span class="absolute -bottom-1 -right-1 bg-emerald-500 text-slate-950 text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold"><i class="fa-solid fa-check"></i></span>' : ''}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-semibold text-sm text-slate-200 truncate">${task.studentName}</h3>
+                            <span class="text-[11px] font-mono text-emerald-400 font-bold">+${task.reward} ₴</span>
+                        </div>
+                        <div class="flex items-center gap-2 mt-0.5">
+                            <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono">${task.topic}</span>
+                            <p class="text-xs text-slate-400 truncate">${isDone ? 'Вирішено!' : task.message}</p>
+                        </div>
+                    </div>
+                `;
+                chatList.appendChild(item);
+            });
+        }
+
+        function openChat(taskId) {
+            state.currentTaskId = taskId;
+            const task = TASKS.find(t => t.id === taskId);
+            if (!task) return;
+
+            headerTitle.innerText = task.studentName;
+            headerSubtitle.innerText = state.completedTasks.includes(taskId) ? "Завдання виконано" : "Потребує допомоги";
+            headerAvatar.innerHTML = `<img src="${task.avatar}" class="w-full h-full rounded-full object-cover">`;
+            backBtn.classList.remove('hidden');
+
+            renderMessages(task);
+
+            chatListView.classList.add('-translate-x-full');
+            chatRoomView.classList.remove('translate-x-full');
+        }
+
+        function renderMessages(task) {
+            messagesBox.innerHTML = '';
+            const isDone = state.completedTasks.includes(task.id);
+
+            const msg1 = document.createElement('div');
+            msg1.className = "flex flex-col items-start max-w-[85%]";
+            msg1.innerHTML = `
+                <div class="bg-telegram-bubbleIn text-slate-200 p-3 rounded-2xl rounded-tl-none shadow-md text-sm border border-slate-800">
+                    ${task.message}
+                </div>
+                <span class="text-[10px] text-slate-500 mt-1 ml-1">Студент</span>
+            `;
+            messagesBox.appendChild(msg1);
+
+            const codeCard = document.createElement('div');
+            codeCard.className = "flex flex-col items-start max-w-[90%] w-full my-2";
+            codeCard.innerHTML = `
+                <div onclick="openEditor()" class="w-full bg-slate-900 border border-cyan-500/30 hover:border-cyan-400 rounded-xl overflow-hidden shadow-lg cursor-pointer group transition-all">
+                    <div class="bg-slate-800/80 px-3 py-1.5 flex items-center justify-between text-xs text-cyan-300 font-mono border-b border-slate-700/50">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-code text-cyan-400"></i> ${task.topic}.py</span>
+                        <span class="text-[10px] bg-cyan-950 text-cyan-300 px-2 py-0.5 rounded border border-cyan-800 group-hover:bg-cyan-500 group-hover:text-slate-950 transition-colors">
+                            <i class="fa-solid fa-pen-to-square"></i> Натисніть щоб редагувати
+                        </span>
+                    </div>
+                    <pre class="p-3 text-xs font-mono text-emerald-300 overflow-x-auto bg-slate-950/80"><code>${escapeHtml(task.initialCode)}</code></pre>
+                </div>
+            `;
+            messagesBox.appendChild(codeCard);
+
+            if (isDone) {
+                const msgSuccess = document.createElement('div');
+                msgSuccess.className = "flex flex-col items-start max-w-[85%] mt-2";
+                msgSuccess.innerHTML = `
+                    <div class="bg-telegram-bubbleIn text-emerald-300 p-3 rounded-2xl rounded-tl-none shadow-md text-sm border border-emerald-500/20">
+                        Дякую величезне! Твій варіант коду працює бездоганно! Тримай винагороду! 🎉
+                    </div>
+                    <span class="text-[10px] text-emerald-500/80 mt-1 ml-1 flex items-center gap-1">
+                        <i class="fa-solid fa-circle-check"></i> Винагороду +${task.reward} ₴ отримано
+                    </span>
+                `;
+                messagesBox.appendChild(msgSuccess);
+            }
+
+            messagesBox.scrollTop = messagesBox.scrollHeight;
+        }
+
+        function showChatList() {
+            headerTitle.innerText = "Python Ментор";
+            headerSubtitle.innerText = state.pyodideLoaded ? "Онлайн • Студенти чекають" : "Завантаження Python WASM...";
+            headerAvatar.innerHTML = `<i class="fa-solid fa-code"></i>`;
+            backBtn.classList.add('hidden');
+
+            chatListView.classList.remove('-translate-x-full');
+            chatRoomView.classList.add('translate-x-full');
+            renderChatList();
+        }
+
+        function openEditor() {
+            const task = TASKS.find(t => t.id === state.currentTaskId);
+            if (!task) return;
+
+            editorTaskTopic.innerText = task.topic;
+            editorTaskHint.innerText = task.hint;
+            
+            codeEditor.value = task.initialCode;
+
+            consoleOutput.innerText = 'Натисніть "Запустити", щоб виконати код в Python 3.11...';
+            consoleOutput.className = 'text-slate-400 font-mono';
+
+            editorView.classList.remove('translate-y-full');
+        }
+
+        function closeEditor() {
+            editorView.classList.add('translate-y-full');
+        }
+
+        function setupTabHandling() {
+            codeEditor.addEventListener('keydown', function(e) {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    insertTab();
+                }
+            });
+        }
+
+        function insertTab() {
+            const start = codeEditor.selectionStart;
+            const end = codeEditor.selectionEnd;
+            const value = codeEditor.value;
+
+            codeEditor.value = value.substring(0, start) + "    " + value.substring(end);
+            codeEditor.selectionStart = codeEditor.selectionEnd = start + 4;
+        }
+
+        function resetCode() {
+            const task = TASKS.find(t => t.id === state.currentTaskId);
+            if (task) {
+                codeEditor.value = task.initialCode;
+            }
+        }
+
+        async function runAndTestCode() {
+            const task = TASKS.find(t => t.id === state.currentTaskId);
+            if (!task) return;
+
+            if (!state.pyodideLoaded) {
+                consoleOutput.innerText = "Зачекайте, Python WebAssembly середовище ще завантажується...";
+                consoleOutput.className = "text-amber-400 font-mono";
+                return;
+            }
+
+            const userCode = codeEditor.value;
+            consoleOutput.innerText = "Запуск та перевірка коду в інтерпретаторі Python...";
+            consoleOutput.className = "text-yellow-400 font-mono";
+            runBtn.disabled = true;
+            runBtnText.innerText = "Обробка...";
+
+            try {
+                // Pass user script to Pyodide workspace
+                pyodide.globals.set("user_code", userCode);
+
+                // Run Python test validation suite
+                await pyodide.runPythonAsync(task.verifyPython);
+
+                const passed = pyodide.globals.get("test_passed");
+                const testMsg = pyodide.globals.get("test_msg");
+
+                if (passed) {
+                    consoleOutput.className = "text-emerald-400 font-mono font-bold";
+                    consoleOutput.innerText = `[PYTHON EXECUTION SUCCESS]\n${testMsg}`;
+
+                    if (!state.completedTasks.includes(task.id)) {
+                        state.completedTasks.push(task.id);
+                        state.balance += task.reward;
+                        saveProgress();
+                        updateBalanceUI();
+                    }
+
+                    setTimeout(() => {
+                        closeEditor();
+                        renderMessages(task);
+                    }, 1500);
+
+                } else {
+                    consoleOutput.className = "text-amber-400 font-mono";
+                    consoleOutput.innerText = `[ТЕСТ НЕ ПРОЙДЕНО]\n${testMsg}\n\nСпробуйте інший варіант!`;
+                }
+
+            } catch (pyErr) {
+                consoleOutput.className = "text-rose-400 font-mono";
+                consoleOutput.innerText = "Python Error Output:\n" + pyErr.message;
+            } finally {
+                runBtn.disabled = false;
+                runBtnText.innerText = "Запустити та перевірити";
+            }
+        }
+
+        function updateBalanceUI() {
+            balanceDisplay.innerText = `${state.balance} ₴`;
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+    </script>
+</body>
+</html>
