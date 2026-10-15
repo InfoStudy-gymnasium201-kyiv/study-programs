@@ -3,15 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Python Messenger</title>
+    <title>Python Messenger (Brython)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Pyodide WASM Python Engine -->
-    <script src="https://raw.githubusercontent.com/InfoStudy-gymnasium201-kyiv/study-programs/refs/heads/main/PythonMessenger/pyodide.js"></script>
+    
+    <!-- Brython Engine Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/brython/3.12.0/brython.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/brython/3.12.0/brython_stdlib.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -52,7 +54,7 @@
             border-radius: 4px;
         }
 
-        /* Clean, single-element code textarea - no overlay mismatches */
+        /* Clean, single-element code textarea */
         .code-textarea-native {
             width: 100%;
             height: 100%;
@@ -79,7 +81,7 @@
         }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans antialiased h-screen flex justify-center items-center overflow-hidden">
+<body onload="brython(1)" class="bg-slate-950 text-slate-100 font-sans antialiased h-screen flex justify-center items-center overflow-hidden">
 
     <!-- Mobile Emulator Wrapper -->
     <div class="w-full max-w-md h-full md:h-[92vh] bg-telegram-bg flex flex-col shadow-2xl relative border-0 md:border md:border-slate-800 md:rounded-3xl overflow-hidden">
@@ -94,11 +96,11 @@
                     <div id="headerAvatar" class="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-white shadow-md">
                         <i class="fa-solid fa-code"></i>
                     </div>
-                    <span id="pyodideStatusDot" class="absolute bottom-0 right-0 w-3 h-3 bg-amber-500 border-2 border-telegram-header rounded-full" title="Завантаження Python..."></span>
+                    <span id="brythonStatusDot" class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-telegram-header rounded-full" title="Brython Готовий"></span>
                 </div>
                 <div>
                     <h1 id="headerTitle" class="font-bold text-sm tracking-wide text-slate-100">Python Ментор</h1>
-                    <p id="headerSubtitle" class="text-xs text-amber-400 font-medium">Завантаження Python WASM...</p>
+                    <p id="headerSubtitle" class="text-xs text-emerald-400 font-medium">Онлайн • Студенти чекають</p>
                 </div>
             </div>
 
@@ -170,7 +172,7 @@
                         </button>
                     </div>
                     <span class="text-emerald-400 text-[11px] font-semibold flex items-center gap-1">
-                        <i class="fa-brands fa-python text-sm"></i> Python 3.11 WASM
+                        <i class="fa-brands fa-python text-sm"></i> Brython 3.12 Engine
                     </span>
                 </div>
 
@@ -181,7 +183,7 @@
                 <div class="mx-3 mb-3 bg-black/80 rounded-xl border border-slate-800 p-3 h-32 overflow-y-auto font-mono text-xs flex flex-col justify-between">
                     <div>
                         <div class="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-1 flex items-center gap-1">
-                            <i class="fa-solid fa-terminal"></i> Консоль виводу (Real Python stdout)
+                            <i class="fa-solid fa-terminal"></i> Консоль виводу (Brython Stdout)
                         </div>
                         <pre id="consoleOutput" class="text-slate-300 whitespace-pre-wrap font-mono">Натисніть "Запустити", щоб перевірити код...</pre>
                     </div>
@@ -198,7 +200,7 @@
     </div>
 
     <script>
-        // Array of 10 pedagogical Python tasks
+        // Array of 10 pedagogical Python tasks with Brython-compatible verification scripts
         const TASKS = [
             {
                 id: 1,
@@ -216,13 +218,12 @@ sys.stdout = io.StringIO()
 exec(user_code)
 output = sys.stdout.getvalue().strip()
 
-# Test condition: total must equal 24 as int
 if "Загалом: 24" in output or output == "24":
     test_passed = True
     test_msg = "Сума обчислена вірно!"
 else:
     test_passed = False
-    test_msg = f"Очікувалося 'Загалом: 24', але отримано: '{output}'"
+    test_msg = "Очікувалося 'Загалом: 24', але отримано: '" + output + "'"
 `
             },
             {
@@ -246,7 +247,7 @@ if "Назва: Python Pro" in output:
     test_msg = "Змінну перейменовано коректно!"
 else:
     test_passed = False
-    test_msg = f"Вивід коду: '{output}' не містить 'Назва: Python Pro'"
+    test_msg = "Вивід коду: '" + output + "' не містить 'Назва: Python Pro'"
 `
             },
             {
@@ -270,7 +271,7 @@ if "Склав!" in output:
     test_msg = "Умова спрацювала вірно!"
 else:
     test_passed = False
-    test_msg = f"Очікувався вивід 'Склав!', але отримано '{output}'"
+    test_msg = "Очікувався вивід 'Склав!', але отримано '" + output + "'"
 `
             },
             {
@@ -286,7 +287,6 @@ else:
 import sys, io
 sys.stdout = io.StringIO()
 
-# Use custom local environment to inspect variable evolution
 loc = {}
 exec(user_code, {}, loc)
 output = sys.stdout.getvalue().strip()
@@ -320,7 +320,7 @@ if "Привіт, Олексій" in output:
     test_msg = "Функція відпрацювала з правильними відступами!"
 else:
     test_passed = False
-    test_msg = f"Очікувалося 'Привіт, Олексій', отримано '{output}'"
+    test_msg = "Очікувалося 'Привіт, Олексій', отримано '" + output + "'"
 `
             },
             {
@@ -392,7 +392,7 @@ if output == "Python це круто":
     test_msg = "Метод join викликано вірно!"
 else:
     test_passed = False
-    test_msg = f"Очікувалося 'Python це круто', але отримано '{output}'"
+    test_msg = "Очікувалося 'Python це круто', але отримано '" + output + "'"
 `
             },
             {
@@ -408,19 +408,16 @@ else:
 import sys, io
 sys.stdout = io.StringIO()
 
-exec(user_code)
-output = sys.stdout.getvalue().strip()
-
-# Verification test suite with multiple age values
 test_env = {}
 exec(user_code, {}, test_env)
+output = sys.stdout.getvalue().strip()
 
 if output == "Без знижки":
     test_passed = True
     test_msg = "Логічну умову виправлено!"
 else:
     test_passed = False
-    test_msg = f"Для віку 25 очікується 'Без знижки', але код вивів '{output}'"
+    test_msg = "Для віку 25 очікується 'Без знижки', але код вивів '" + output + "'"
 `
             },
             {
@@ -444,7 +441,7 @@ if "120" in output and "Факторіал 5:" in output:
     test_msg = "Факторіал обчислено вірно, рекурсію зупинено!"
 else:
     test_passed = False
-    test_msg = f"Очікувалося 'Факторіал 5: 120', отримано '{output}'"
+    test_msg = "Очікувалося 'Факторіал 5: 120', отримано '" + output + "'"
 `
             }
         ];
@@ -453,11 +450,8 @@ else:
         let state = {
             balance: 0,
             completedTasks: [],
-            currentTaskId: null,
-            pyodideLoaded: false
+            currentTaskId: null
         };
-
-        let pyodide = null;
 
         // UI elements references
         const chatListView = document.getElementById('chatListView');
@@ -477,28 +471,12 @@ else:
         const editorTaskHint = document.getElementById('editorTaskHint');
         const runBtn = document.getElementById('runBtn');
         const runBtnText = document.getElementById('runBtnText');
-        const pyodideStatusDot = document.getElementById('pyodideStatusDot');
 
-        window.onload = async function() {
+        window.onload = function() {
             loadSavedProgress();
             renderChatList();
             setupTabHandling();
             updateBalanceUI();
-
-            // Asynchronously load Pyodide Python Engine
-            try {
-                pyodide = await loadPyodide();
-                state.pyodideLoaded = true;
-                pyodideStatusDot.className = "absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-telegram-header rounded-full";
-                pyodideStatusDot.title = "Python 3.11 Готовий";
-                headerSubtitle.innerText = "Онлайн • Студенти чекають";
-                headerSubtitle.className = "text-xs text-emerald-400 font-medium";
-            } catch (err) {
-                console.error("Помилка завантаження Pyodide:", err);
-                pyodideStatusDot.className = "absolute bottom-0 right-0 w-3 h-3 bg-rose-500 border-2 border-telegram-header rounded-full";
-                headerSubtitle.innerText = "Помилка завантаження Python engine";
-                headerSubtitle.className = "text-xs text-rose-400 font-medium";
-            }
         };
 
         function saveProgress() {
@@ -522,15 +500,13 @@ else:
         }
 
         function resetGameProgress() {
-            if (confirm("Скинути весь прогрес і почати спочатку?")) {
-                state.balance = 0;
-                state.completedTasks = [];
-                saveProgress();
-                updateBalanceUI();
-                renderChatList();
-                if (state.currentTaskId) {
-                    showChatList();
-                }
+            state.balance = 0;
+            state.completedTasks = [];
+            saveProgress();
+            updateBalanceUI();
+            renderChatList();
+            if (state.currentTaskId) {
+                showChatList();
             }
         }
 
@@ -629,7 +605,7 @@ else:
 
         function showChatList() {
             headerTitle.innerText = "Python Ментор";
-            headerSubtitle.innerText = state.pyodideLoaded ? "Онлайн • Студенти чекають" : "Завантаження Python WASM...";
+            headerSubtitle.innerText = "Онлайн • Студенти чекають";
             headerAvatar.innerHTML = `<i class="fa-solid fa-code"></i>`;
             backBtn.classList.add('hidden');
 
@@ -647,7 +623,7 @@ else:
             
             codeEditor.value = task.initialCode;
 
-            consoleOutput.innerText = 'Натисніть "Запустити", щоб виконати код в Python 3.11...';
+            consoleOutput.innerText = 'Натисніть "Запустити", щоб виконати код в Brython 3.12...';
             consoleOutput.className = 'text-slate-400 font-mono';
 
             editorView.classList.remove('translate-y-full');
@@ -682,62 +658,6 @@ else:
             }
         }
 
-        async function runAndTestCode() {
-            const task = TASKS.find(t => t.id === state.currentTaskId);
-            if (!task) return;
-
-            if (!state.pyodideLoaded) {
-                consoleOutput.innerText = "Зачекайте, Python WebAssembly середовище ще завантажується...";
-                consoleOutput.className = "text-amber-400 font-mono";
-                return;
-            }
-
-            const userCode = codeEditor.value;
-            consoleOutput.innerText = "Запуск та перевірка коду в інтерпретаторі Python...";
-            consoleOutput.className = "text-yellow-400 font-mono";
-            runBtn.disabled = true;
-            runBtnText.innerText = "Обробка...";
-
-            try {
-                // Pass user script to Pyodide workspace
-                pyodide.globals.set("user_code", userCode);
-
-                // Run Python test validation suite
-                await pyodide.runPythonAsync(task.verifyPython);
-
-                const passed = pyodide.globals.get("test_passed");
-                const testMsg = pyodide.globals.get("test_msg");
-
-                if (passed) {
-                    consoleOutput.className = "text-emerald-400 font-mono font-bold";
-                    consoleOutput.innerText = `[PYTHON EXECUTION SUCCESS]\n${testMsg}`;
-
-                    if (!state.completedTasks.includes(task.id)) {
-                        state.completedTasks.push(task.id);
-                        state.balance += task.reward;
-                        saveProgress();
-                        updateBalanceUI();
-                    }
-
-                    setTimeout(() => {
-                        closeEditor();
-                        renderMessages(task);
-                    }, 1500);
-
-                } else {
-                    consoleOutput.className = "text-amber-400 font-mono";
-                    consoleOutput.innerText = `[ТЕСТ НЕ ПРОЙДЕНО]\n${testMsg}\n\nСпробуйте інший варіант!`;
-                }
-
-            } catch (pyErr) {
-                consoleOutput.className = "text-rose-400 font-mono";
-                consoleOutput.innerText = "Python Error Output:\n" + pyErr.message;
-            } finally {
-                runBtn.disabled = false;
-                runBtnText.innerText = "Запустити та перевірити";
-            }
-        }
-
         function updateBalanceUI() {
             balanceDisplay.innerText = `${state.balance} ₴`;
         }
@@ -745,6 +665,79 @@ else:
         function escapeHtml(str) {
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
+
+        // Bridge function called from Brython script upon completion
+        function handleVerificationResult(passed, testMsg) {
+            const task = TASKS.find(t => t.id === state.currentTaskId);
+            if (!task) return;
+
+            if (passed) {
+                consoleOutput.className = "text-emerald-400 font-mono font-bold";
+                consoleOutput.innerText = `[BRYTHON EXECUTION SUCCESS]\n${testMsg}`;
+
+                if (!state.completedTasks.includes(task.id)) {
+                    state.completedTasks.push(task.id);
+                    state.balance += task.reward;
+                    saveProgress();
+                    updateBalanceUI();
+                }
+
+                setTimeout(() => {
+                    closeEditor();
+                    renderMessages(task);
+                }, 1500);
+
+            } else {
+                consoleOutput.className = "text-amber-400 font-mono";
+                consoleOutput.innerText = `[ТЕСТ НЕ ПРОЙДЕНО]\n${testMsg}\n\nСпробуйте інший варіант!`;
+            }
+
+            runBtn.disabled = false;
+            runBtnText.innerText = "Запустити та перевірити";
+        }
+
+        function handleExecutionError(errMessage) {
+            consoleOutput.className = "text-rose-400 font-mono";
+            consoleOutput.innerText = "Python Error Output:\n" + errMessage;
+            runBtn.disabled = false;
+            runBtnText.innerText = "Запустити та перевірити";
+        }
+
+        function runAndTestCode() {
+            const task = TASKS.find(t => t.id === state.currentTaskId);
+            if (!task) return;
+
+            const userCode = codeEditor.value;
+            consoleOutput.innerText = "Запуск та перевірка коду в інтерпретаторі Brython...";
+            consoleOutput.className = "text-yellow-400 font-mono";
+            runBtn.disabled = true;
+            runBtnText.innerText = "Обробка...";
+
+            // Trigger execution via Brython runtime script
+            window.executeBrythonTask(userCode, task.verifyPython);
+        }
     </script>
+
+    <!-- Brython Runner Script -->
+    <script type="text/python">
+from browser import window, window
+
+def execute_brython_task(user_code, verify_script):
+    try:
+        # Pass user code into global context for verification script execution
+        globs = {"user_code": user_code}
+        exec(verify_script, globs)
+        
+        passed = globs.get("test_passed", False)
+        msg = globs.get("test_msg", "Невідомий результат перевірки")
+        
+        window.handleVerificationResult(passed, msg)
+    except Exception as e:
+        window.handleExecutionError(str(e))
+
+# Attach python runner to window object for JavaScript interaction
+window.executeBrythonTask = execute_brython_task
+    </script>
+
 </body>
 </html>
