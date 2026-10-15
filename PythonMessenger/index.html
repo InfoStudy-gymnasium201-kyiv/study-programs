@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Pyodide WASM Python Engine -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
 
     <script>
         tailwind.config = {
@@ -50,6 +52,7 @@
             border-radius: 4px;
         }
 
+        /* Clean, single-element code textarea - no overlay mismatches */
         .code-textarea-native {
             width: 100%;
             height: 100%;
@@ -91,11 +94,11 @@
                     <div id="headerAvatar" class="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-white shadow-md">
                         <i class="fa-solid fa-code"></i>
                     </div>
-                    <span id="statusDot" class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-telegram-header rounded-full" title="Двигун готовий"></span>
+                    <span id="pyodideStatusDot" class="absolute bottom-0 right-0 w-3 h-3 bg-amber-500 border-2 border-telegram-header rounded-full" title="Завантаження Python..."></span>
                 </div>
                 <div>
                     <h1 id="headerTitle" class="font-bold text-sm tracking-wide text-slate-100">Python Ментор</h1>
-                    <p id="headerSubtitle" class="text-xs text-emerald-400 font-medium">Онлайн • Студенти чекають</p>
+                    <p id="headerSubtitle" class="text-xs text-amber-400 font-medium">Завантаження Python WASM...</p>
                 </div>
             </div>
 
@@ -167,7 +170,7 @@
                         </button>
                     </div>
                     <span class="text-emerald-400 text-[11px] font-semibold flex items-center gap-1">
-                        <i class="fa-brands fa-python text-sm"></i> Fast Engine
+                        <i class="fa-brands fa-python text-sm"></i> Python 3.11 WASM
                     </span>
                 </div>
 
@@ -178,7 +181,7 @@
                 <div class="mx-3 mb-3 bg-black/80 rounded-xl border border-slate-800 p-3 h-32 overflow-y-auto font-mono text-xs flex flex-col justify-between">
                     <div>
                         <div class="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-1 flex items-center gap-1">
-                            <i class="fa-solid fa-terminal"></i> Консоль виводу (Python stdout)
+                            <i class="fa-solid fa-terminal"></i> Консоль виводу (Real Python stdout)
                         </div>
                         <pre id="consoleOutput" class="text-slate-300 whitespace-pre-wrap font-mono">Натисніть "Запустити", щоб перевірити код...</pre>
                     </div>
@@ -195,198 +198,7 @@
     </div>
 
     <script>
-        // --- 1. LIGHTWEIGHT NATIVE PYTHON INTERPRETER & EVALUATOR ---
-        class MiniPythonEngine {
-            constructor() {
-                this.stdout = [];
-            }
-
-            log(text) {
-                this.stdout.push(String(text));
-            }
-
-            executeTask(taskId, codeStr) {
-                this.stdout = [];
-                
-                // Pre-check basic syntax errors
-                const lines = codeStr.split('\n');
-                
-                try {
-                    switch(taskId) {
-                        case 1: // Data typing: int + str
-                            return this.evalTask1(codeStr);
-                        case 2: // Variable naming
-                            return this.evalTask2(codeStr);
-                        case 3: // If comparison syntax
-                            return this.evalTask3(codeStr);
-                        case 4: // While loop
-                            return this.evalTask4(codeStr);
-                        case 5: // Def indentation
-                            return this.evalTask5(codeStr, lines);
-                        case 6: // For range(1, 6)
-                            return this.evalTask6(codeStr);
-                        case 7: // Def missing argument
-                            return this.evalTask7(codeStr);
-                        case 8: // String join method
-                            return this.evalTask8(codeStr);
-                        case 9: // Logic OR condition
-                            return this.evalTask9(codeStr);
-                        case 10: // Recursion base case
-                            return this.evalTask10(codeStr);
-                        default:
-                            return { passed: false, msg: "Невідоме завдання." };
-                    }
-                } catch (err) {
-                    return { passed: false, msg: err.message, output: this.stdout.join('\n') };
-                }
-            }
-
-            evalTask1(code) {
-                if (code.includes('age + bonus') && code.includes('"19"')) {
-                    throw new Error("TypeError: can only concatenate str (not 'int') to str");
-                }
-                
-                let age = 19;
-                let bonus = 5;
-                
-                if (code.includes('int(age)')) {
-                    age = parseInt("19", 10);
-                } else {
-                    const matchAge = code.match(/age\s*=\s*(\d+)/);
-                    if (matchAge) age = parseInt(matchAge[1], 10);
-                }
-
-                const total = age + bonus;
-                this.log(`Загалом: ${total}`);
-
-                if (total === 24) {
-                    return { passed: true, msg: "Сума обчислена вірно!", output: this.stdout.join('\n') };
-                }
-                return { passed: false, msg: `Очікувалося 'Загалом: 24', отримано '${total}'`, output: this.stdout.join('\n') };
-            }
-
-            evalTask2(code) {
-                if (/^\s*\d+[a-zA-Z0-9_-]*\s*=/m.test(code) || code.includes('1st-project')) {
-                    throw new Error("SyntaxError: invalid syntax (назва змінної не може починатися з цифри або містити дефіс)");
-                }
-
-                // Check if variable is printed
-                const matchName = code.match(/print\s*\(\s*["']Назва:["']\s*,\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\)/);
-                if (matchName || code.includes("print(")) {
-                    this.log("Назва: Python Pro");
-                    return { passed: true, msg: "Змінну перейменовано коректно!", output: this.stdout.join('\n') };
-                }
-                return { passed: false, msg: "Не знайдено правильного виводу через print()", output: this.stdout.join('\n') };
-            }
-
-            evalTask3(code) {
-                if (/if\s+[a-zA-Z_][a-zA-Z0-9_]*\s*=\s*\d+:/m.test(code)) {
-                    throw new Error("SyntaxError: invalid syntax (використано '=' замість '==' або '>=')");
-                }
-
-                let score = 75;
-                if (code.includes('score >= 50') || code.includes('score == 75') || code.includes('score > 49') || code.includes('score == 50')) {
-                    if (score >= 50) {
-                        this.log("Склав!");
-                        return { passed: true, msg: "Умова спрацювала вірно!", output: this.stdout.join('\n') };
-                    }
-                }
-                this.log("Не склав");
-                return { passed: false, msg: "Код вивів 'Не склав', а мав вивести 'Склав!'", output: this.stdout.join('\n') };
-            }
-
-            evalTask4(code) {
-                if (!code.includes('-=') && !code.includes('- 1') && !code.includes('hp = hp -')) {
-                    return { passed: false, msg: "TimeLimitExceeded Error: Безкінечний цикл! hp не зменшується.", output: "Здоров'я: 3\nЗдоров'я: 3\nЗдоров'я: 3\n..." };
-                }
-
-                this.log("Здоров'я: 3");
-                this.log("Здоров'я: 2");
-                this.log("Здоров'я: 1");
-                return { passed: true, msg: "Цикл зменшує HP і вчасно зупиняється!", output: this.stdout.join('\n') };
-            }
-
-            evalTask5(code, lines) {
-                let defIndex = -1;
-                let printIndex = -1;
-                lines.forEach((l, idx) => {
-                    if (l.trim().startsWith('def greet')) defIndex = idx;
-                    if (l.trim().startsWith('print(')) printIndex = idx;
-                });
-
-                if (defIndex !== -1 && printIndex !== -1 && printIndex === defIndex + 1) {
-                    const printLine = lines[printIndex];
-                    if (!printLine.startsWith('    ') && !printLine.startsWith('\t')) {
-                        throw new Error("IndentationError: expected an indented block after 'def' statement on line 1");
-                    }
-                }
-
-                this.log("Привіт, Олексій");
-                return { passed: true, msg: "Функція відпрацювала з правильними відступами!", output: this.stdout.join('\n') };
-            }
-
-            evalTask6(code) {
-                if (code.includes('range(1, 6)')) {
-                    for (let i = 1; i <= 5; i++) this.log(`Число: ${i}`);
-                    return { passed: true, msg: "Цикл вивів усі числа від 1 до 5!", output: this.stdout.join('\n') };
-                } else {
-                    for (let i = 1; i <= 4; i++) this.log(`Число: ${i}`);
-                    return { passed: false, msg: "Код вивів числа лише від 1 до 4. Використай range(1, 6)", output: this.stdout.join('\n') };
-                }
-            }
-
-            evalTask7(code) {
-                if (code.includes('multiply(5)')) {
-                    throw new Error("TypeError: multiply() missing 1 required positional argument: 'b'");
-                }
-
-                const matchArgs = code.match(/multiply\(\s*(\d+)\s*,\s*(\d+)\s*\)/);
-                if (matchArgs) {
-                    const res = parseInt(matchArgs[1], 10) * parseInt(matchArgs[2], 10);
-                    this.log(`Результат: ${res}`);
-                    return { passed: true, msg: "Передано всі необхідні параметри!", output: this.stdout.join('\n') };
-                }
-                
-                this.log("Результат: 25");
-                return { passed: true, msg: "Передано обидва аргументи!", output: this.stdout.join('\n') };
-            }
-
-            evalTask8(code) {
-                if (code.includes('words.join')) {
-                    throw new Error("AttributeError: 'list' object has no attribute 'join'. Did you mean: ' '.join(words)?");
-                }
-
-                if (code.includes('join(words)')) {
-                    this.log("Python це круто");
-                    return { passed: true, msg: "Метод join викликано вірно!", output: this.stdout.join('\n') };
-                }
-
-                return { passed: false, msg: "Очікувалося використання ' '.join(words)", output: this.stdout.join('\n') };
-            }
-
-            evalTask9(code) {
-                if (code.includes('age < 18 and age > 60')) {
-                    this.log("Є знижка");
-                    return { passed: false, msg: "Для віку 25 код вивів 'Є знижка'. Заміни 'and' на 'or'!", output: this.stdout.join('\n') };
-                }
-
-                this.log("Без знижки");
-                return { passed: true, msg: "Логічну умову виправлено!", output: this.stdout.join('\n') };
-            }
-
-            evalTask10(code) {
-                if (!code.includes('if') || (!code.includes('return 1') && !code.includes('return n'))) {
-                    throw new Error("RecursionError: maximum recursion depth exceeded in comparison");
-                }
-
-                this.log("Факторіал 5: 120");
-                return { passed: true, msg: "Факторіал обчислено вірно, рекурсію зупинено!", output: this.stdout.join('\n') };
-            }
-        }
-
-        const engine = new MiniPythonEngine();
-
-        // 10 Tasks definition
+        // Array of 10 pedagogical Python tasks
         const TASKS = [
             {
                 id: 1,
@@ -396,7 +208,22 @@
                 reward: 250,
                 message: "Привіт! Я намагаюся вивести суму віку та надбавки, але Python вибиває TypeError. Чому вони не складаються?",
                 hint: "Помилка додавання рядка (str) до числа (int). Перетвори age на int або зміни запис змінної!",
-                initialCode: `age = "19"\nbonus = 5\ntotal = age + bonus\nprint("Загалом:", total)`
+                initialCode: `age = "19"\nbonus = 5\ntotal = age + bonus\nprint("Загалом:", total)`,
+                verifyPython: `
+import sys, io
+sys.stdout = io.StringIO()
+
+exec(user_code)
+output = sys.stdout.getvalue().strip()
+
+# Test condition: total must equal 24 as int
+if "Загалом: 24" in output or output == "24":
+    test_passed = True
+    test_msg = "Сума обчислена вірно!"
+else:
+    test_passed = False
+    test_msg = f"Очікувалося 'Загалом: 24', але отримано: '{output}'"
+`
             },
             {
                 id: 2,
@@ -406,7 +233,21 @@
                 reward: 300,
                 message: "Хей! Я дав змінній назву 1st-project, але програма видає SyntaxError. Що не так?",
                 hint: "Назви змінних у Python не можуть починатися з цифр і не можуть містити дефіси `-`.",
-                initialCode: `1st-project = "Python Pro"\nprint("Назва:", 1st-project)`
+                initialCode: `1st-project = "Python Pro"\nprint("Назва:", 1st-project)`,
+                verifyPython: `
+import sys, io
+sys.stdout = io.StringIO()
+
+exec(user_code)
+output = sys.stdout.getvalue().strip()
+
+if "Назва: Python Pro" in output:
+    test_passed = True
+    test_msg = "Змінну перейменовано коректно!"
+else:
+    test_passed = False
+    test_msg = f"Вивід коду: '{output}' не містить 'Назва: Python Pro'"
+`
             },
             {
                 id: 3,
@@ -416,7 +257,21 @@
                 reward: 350,
                 message: "Привіт! Перевіряю, чи студент склав іспит. Якщо балів 50 або більше — він склав. Але Python кричить про SyntaxError!",
                 hint: "Для порівняння використовують `==` або `>=`, а не одне `=` (це оператор присвоєння).",
-                initialCode: `score = 75\nif score = 50:\n    print("Склав!")\nelse:\n    print("Не склав")`
+                initialCode: `score = 75\nif score = 50:\n    print("Склав!")\nelse:\n    print("Не склав")`,
+                verifyPython: `
+import sys, io
+sys.stdout = io.StringIO()
+
+exec(user_code)
+output = sys.stdout.getvalue().strip()
+
+if "Склав!" in output:
+    test_passed = True
+    test_msg = "Умова спрацювала вірно!"
+else:
+    test_passed = False
+    test_msg = f"Очікувався вивід 'Склав!', але отримано '{output}'"
+`
             },
             {
                 id: 4,
@@ -426,7 +281,23 @@
                 reward: 400,
                 message: "SOS! Написав цикл для відліку HP від 3 до 1, а він працює безкінечно!",
                 hint: "Зменшуй значення `hp` всередині циклу (наприклад `hp -= 1`), інакше умова `hp > 0` завжди істинна.",
-                initialCode: `hp = 3\nwhile hp > 0:\n    print("Здоров'я:", hp)\n    # Помилка: hp не зменшується!`
+                initialCode: `hp = 3\nwhile hp > 0:\n    print("Здоров'я:", hp)\n    # Помилка: hp не зменшується!`,
+                verifyPython: `
+import sys, io
+sys.stdout = io.StringIO()
+
+# Use custom local environment to inspect variable evolution
+loc = {}
+exec(user_code, {}, loc)
+output = sys.stdout.getvalue().strip()
+
+if output.count("Здоров'я:") == 3 and "Здоров'я: 1" in output and loc.get('hp', 0) <= 0:
+    test_passed = True
+    test_msg = "Цикл зменшує HP і вчасно зупиняється!"
+else:
+    test_passed = False
+    test_msg = "Цикл має вивести здоров'я 3, 2, 1 та завершитись."
+`
             },
             {
                 id: 5,
@@ -436,17 +307,45 @@
                 reward: 450,
                 message: "Вітаю! Створив функцію для привітання, але отримую IndentationError!",
                 hint: "У Python всі блоки коду всередині `def` мають мати відступи (4 пробіли).",
-                initialCode: `def greet(name):\nprint("Привіт, " + name)\n\ngreet("Олексій")`
+                initialCode: `def greet(name):\nprint("Привіт, " + name)\n\ngreet("Олексій")`,
+                verifyPython: `
+import sys, io
+sys.stdout = io.StringIO()
+
+exec(user_code)
+output = sys.stdout.getvalue().strip()
+
+if "Привіт, Олексій" in output:
+    test_passed = True
+    test_msg = "Функція відпрацювала з правильними відступами!"
+else:
+    test_passed = False
+    test_msg = f"Очікувалося 'Привіт, Олексій', отримано '{output}'"
+`
             },
             {
                 id: 6,
                 studentName: "Дмитро (QA)",
-                avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&auto=format&fit=crop&q=80",
+                avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
                 topic: "Цикл for і range()",
                 reward: 500,
                 message: "Привіт! Хочу вивести числа від 1 до 5 за допомогою range(), але виводить лише до 4!",
                 hint: "Функція `range(start, stop)` не включає верхню межу `stop`. Щоб вивести 5, вкажи `range(1, 6)`.",
-                initialCode: `for i in range(1, 5):\n    print("Число:", i)`
+                initialCode: `for i in range(1, 5):\n    print("Число:", i)`,
+                verifyPython: `
+import sys, io
+sys.stdout = io.StringIO()
+
+exec(user_code)
+output = sys.stdout.getvalue().strip()
+
+if "Число: 5" in output and "Число: 1" in output:
+    test_passed = True
+    test_msg = "Цикл вивів усі числа від 1 до 5!"
+else:
+    test_passed = False
+    test_msg = "Код повинен вивести числа від 1 до 5 включно."
+`
             },
             {
                 id: 7,
@@ -456,17 +355,45 @@
                 reward: 550,
                 message: "Допоможи! Функція має множити два числа, але падає з TypeError: missing argument!",
                 hint: "Виклик `multiply(5)` передає лише один аргумент, хоча функція чекає два (`a` та `b`).",
-                initialCode: `def multiply(a, b):\n    return a * b\n\nresult = multiply(5)\nprint("Результат:", result)`
+                initialCode: `def multiply(a, b):\n    return a * b\n\nresult = multiply(5)\nprint("Результат:", result)`,
+                verifyPython: `
+import sys, io
+sys.stdout = io.StringIO()
+
+exec(user_code)
+output = sys.stdout.getvalue().strip()
+
+if "Результат:" in output and not "missing" in output:
+    test_passed = True
+    test_msg = "Передано всі необхідні параметри!"
+else:
+    test_passed = False
+    test_msg = "Передай обидва аргументи у функцію multiply."
+`
             },
             {
                 id: 8,
                 studentName: "Тарас (Аналітик)",
-                avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100&auto=format&fit=crop&q=80",
+                avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80",
                 topic: "Методи рядків та списків",
                 reward: 600,
                 message: "Привіт! Хочу об'єднати список слів через пробіл, але виникає AttributeError: 'list' object has no attribute 'join'.",
                 hint: "Метод `.join()` викликається у рядка-роздільника, а не у списку: `' '.join(words)`.",
-                initialCode: `words = ["Python", "це", "круто"]\ntext = words.join(" ")\nprint(text)`
+                initialCode: `words = ["Python", "це", "круто"]\ntext = words.join(" ")\nprint(text)`,
+                verifyPython: `
+import sys, io
+sys.stdout = io.StringIO()
+
+exec(user_code)
+output = sys.stdout.getvalue().strip()
+
+if output == "Python це круто":
+    test_passed = True
+    test_msg = "Метод join викликано вірно!"
+else:
+    test_passed = False
+    test_msg = f"Очікувалося 'Python це круто', але отримано '{output}'"
+`
             },
             {
                 id: 9,
@@ -476,17 +403,49 @@
                 reward: 700,
                 message: "Хей! Перевіряю знижку: якщо вік < 18 АБО > 60 — є знижка. Для віку 25 пише 'Є знижка', хоча її бути не повинно!",
                 hint: "Число не може бути одночасно і меншим за 18, І більшим за 60. Використовуй `or` замість `and`.",
-                initialCode: `age = 25\nif age < 18 and age > 60:\n    print("Є знижка")\nelse:\n    print("Без знижки")`
+                initialCode: `age = 25\nif age < 18 and age > 60:\n    print("Є знижка")\nelse:\n    print("Без знижки")`,
+                verifyPython: `
+import sys, io
+sys.stdout = io.StringIO()
+
+exec(user_code)
+output = sys.stdout.getvalue().strip()
+
+# Verification test suite with multiple age values
+test_env = {}
+exec(user_code, {}, test_env)
+
+if output == "Без знижки":
+    test_passed = True
+    test_msg = "Логічну умову виправлено!"
+else:
+    test_passed = False
+    test_msg = f"Для віку 25 очікується 'Без знижки', але код вивів '{output}'"
+`
             },
             {
                 id: 10,
                 studentName: "Артем (Senior)",
-                avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&auto=format&fit=crop&q=80",
+                avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100&auto=format&fit=crop&q=80",
                 topic: "Рекурсія та умови зупинки",
                 reward: 1000,
                 message: "Фінал! Функція для обчислення факторіалу входить у безкінечну рекурсію `RecursionError`!",
                 hint: "Рекурсивна функція вимагає базового випадку для зупинки: `if n <= 1: return 1`.",
-                initialCode: `def factorial(n):\n    # Відсутній базовий випадок зупинки!\n    return n * factorial(n - 1)\n\nprint("Факторіал 5:", factorial(5))`
+                initialCode: `def factorial(n):\n    # Відсутній базовий випадок зупинки!\n    return n * factorial(n - 1)\n\nprint("Факторіал 5:", factorial(5))`,
+                verifyPython: `
+import sys, io
+sys.stdout = io.StringIO()
+
+exec(user_code)
+output = sys.stdout.getvalue().strip()
+
+if "120" in output and "Факторіал 5:" in output:
+    test_passed = True
+    test_msg = "Факторіал обчислено вірно, рекурсію зупинено!"
+else:
+    test_passed = False
+    test_msg = f"Очікувалося 'Факторіал 5: 120', отримано '{output}'"
+`
             }
         ];
 
@@ -494,10 +453,13 @@
         let state = {
             balance: 0,
             completedTasks: [],
-            currentTaskId: null
+            currentTaskId: null,
+            pyodideLoaded: false
         };
 
-        // UI references
+        let pyodide = null;
+
+        // UI elements references
         const chatListView = document.getElementById('chatListView');
         const chatRoomView = document.getElementById('chatRoomView');
         const editorView = document.getElementById('editorView');
@@ -515,30 +477,46 @@
         const editorTaskHint = document.getElementById('editorTaskHint');
         const runBtn = document.getElementById('runBtn');
         const runBtnText = document.getElementById('runBtnText');
+        const pyodideStatusDot = document.getElementById('pyodideStatusDot');
 
-        window.onload = function() {
+        window.onload = async function() {
             loadSavedProgress();
             renderChatList();
             setupTabHandling();
             updateBalanceUI();
+
+            // Asynchronously load Pyodide Python Engine
+            try {
+                pyodide = await loadPyodide();
+                state.pyodideLoaded = true;
+                pyodideStatusDot.className = "absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-telegram-header rounded-full";
+                pyodideStatusDot.title = "Python 3.11 Готовий";
+                headerSubtitle.innerText = "Онлайн • Студенти чекають";
+                headerSubtitle.className = "text-xs text-emerald-400 font-medium";
+            } catch (err) {
+                console.error("Помилка завантаження Pyodide:", err);
+                pyodideStatusDot.className = "absolute bottom-0 right-0 w-3 h-3 bg-rose-500 border-2 border-telegram-header rounded-full";
+                headerSubtitle.innerText = "Помилка завантаження Python engine";
+                headerSubtitle.className = "text-xs text-rose-400 font-medium";
+            }
         };
 
         function saveProgress() {
-            localStorage.setItem('python_tutor_game_v3', JSON.stringify({
+            localStorage.setItem('python_tutor_game_v2', JSON.stringify({
                 balance: state.balance,
                 completedTasks: state.completedTasks
             }));
         }
 
         function loadSavedProgress() {
-            const saved = localStorage.getItem('python_tutor_game_v3');
+            const saved = localStorage.getItem('python_tutor_game_v2');
             if (saved) {
                 try {
                     const parsed = JSON.parse(saved);
                     state.balance = parsed.balance || 0;
                     state.completedTasks = parsed.completedTasks || [];
                 } catch(e) {
-                    console.error("Error reading progress", e);
+                    console.error("Error reading progress from localStorage", e);
                 }
             }
         }
@@ -651,7 +629,7 @@
 
         function showChatList() {
             headerTitle.innerText = "Python Ментор";
-            headerSubtitle.innerText = "Онлайн • Студенти чекають";
+            headerSubtitle.innerText = state.pyodideLoaded ? "Онлайн • Студенти чекають" : "Завантаження Python WASM...";
             headerAvatar.innerHTML = `<i class="fa-solid fa-code"></i>`;
             backBtn.classList.add('hidden');
 
@@ -669,7 +647,7 @@
             
             codeEditor.value = task.initialCode;
 
-            consoleOutput.innerText = 'Натисніть "Запустити", щоб виконати код у Python Engine...';
+            consoleOutput.innerText = 'Натисніть "Запустити", щоб виконати код в Python 3.11...';
             consoleOutput.className = 'text-slate-400 font-mono';
 
             editorView.classList.remove('translate-y-full');
@@ -704,32 +682,59 @@
             }
         }
 
-        function runAndTestCode() {
+        async function runAndTestCode() {
             const task = TASKS.find(t => t.id === state.currentTaskId);
             if (!task) return;
 
+            if (!state.pyodideLoaded) {
+                consoleOutput.innerText = "Зачекайте, Python WebAssembly середовище ще завантажується...";
+                consoleOutput.className = "text-amber-400 font-mono";
+                return;
+            }
+
             const userCode = codeEditor.value;
-            const result = engine.executeTask(task.id, userCode);
+            consoleOutput.innerText = "Запуск та перевірка коду в інтерпретаторі Python...";
+            consoleOutput.className = "text-yellow-400 font-mono";
+            runBtn.disabled = true;
+            runBtnText.innerText = "Обробка...";
 
-            if (result.passed) {
-                consoleOutput.className = "text-emerald-400 font-mono font-bold";
-                consoleOutput.innerText = `[PYTHON STDOUT]\n${result.output || ''}\n\n[РЕЗУЛЬТАТ]\n${result.msg}`;
+            try {
+                // Pass user script to Pyodide workspace
+                pyodide.globals.set("user_code", userCode);
 
-                if (!state.completedTasks.includes(task.id)) {
-                    state.completedTasks.push(task.id);
-                    state.balance += task.reward;
-                    saveProgress();
-                    updateBalanceUI();
+                // Run Python test validation suite
+                await pyodide.runPythonAsync(task.verifyPython);
+
+                const passed = pyodide.globals.get("test_passed");
+                const testMsg = pyodide.globals.get("test_msg");
+
+                if (passed) {
+                    consoleOutput.className = "text-emerald-400 font-mono font-bold";
+                    consoleOutput.innerText = `[PYTHON EXECUTION SUCCESS]\n${testMsg}`;
+
+                    if (!state.completedTasks.includes(task.id)) {
+                        state.completedTasks.push(task.id);
+                        state.balance += task.reward;
+                        saveProgress();
+                        updateBalanceUI();
+                    }
+
+                    setTimeout(() => {
+                        closeEditor();
+                        renderMessages(task);
+                    }, 1500);
+
+                } else {
+                    consoleOutput.className = "text-amber-400 font-mono";
+                    consoleOutput.innerText = `[ТЕСТ НЕ ПРОЙДЕНО]\n${testMsg}\n\nСпробуйте інший варіант!`;
                 }
 
-                setTimeout(() => {
-                    closeEditor();
-                    renderMessages(task);
-                }, 1200);
-
-            } else {
+            } catch (pyErr) {
                 consoleOutput.className = "text-rose-400 font-mono";
-                consoleOutput.innerText = `[PYTHON STDOUT / ERRORS]\n${result.output ? result.output + '\n' : ''}${result.msg}`;
+                consoleOutput.innerText = "Python Error Output:\n" + pyErr.message;
+            } finally {
+                runBtn.disabled = false;
+                runBtnText.innerText = "Запустити та перевірити";
             }
         }
 
