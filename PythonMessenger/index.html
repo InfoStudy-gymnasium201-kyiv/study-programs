@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Python Messenger (Brython)</title>
+    <title>Python Messenger (Brython) — Частина 2</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
@@ -99,8 +99,8 @@
                     <span id="brythonStatusDot" class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-telegram-header rounded-full" title="Brython Готовий"></span>
                 </div>
                 <div>
-                    <h1 id="headerTitle" class="font-bold text-sm tracking-wide text-slate-100">Python Ментор</h1>
-                    <p id="headerSubtitle" class="text-xs text-emerald-400 font-medium">Онлайн • Студенти чекають</p>
+                    <h1 id="headerTitle" class="font-bold text-sm tracking-wide text-slate-100">Python Ментор (Сезон 2)</h1>
+                    <p id="headerSubtitle" class="text-xs text-emerald-400 font-medium">Онлайн • Нові студенти</p>
                 </div>
             </div>
 
@@ -117,7 +117,7 @@
             <section id="chatListView" class="absolute inset-0 flex flex-col z-10 transition-transform duration-300">
                 <div class="p-3 bg-telegram-header/50 backdrop-blur border-b border-slate-800/40 flex items-center justify-between">
                     <div>
-                        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider px-2">Завдання студентів</div>
+                        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider px-2">Нові завдання</div>
                         <div id="progressText" class="text-xs text-cyan-400 px-2 font-mono">Вирішено: 0 / 10 завдань</div>
                     </div>
                     <button onclick="resetGameProgress()" class="text-xs text-slate-500 hover:text-rose-400 px-2 py-1 rounded hover:bg-slate-800 transition-colors" title="Скинути весь прогрес">
@@ -200,17 +200,17 @@
     </div>
 
     <script>
-        // Array of 10 pedagogical Python tasks with Brython-compatible verification scripts
+        // Array of 10 NEW pedagogical Python tasks (Season 2)
         const TASKS = [
             {
                 id: 1,
-                studentName: "Анна (1-й курс)",
-                avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80",
+                studentName: "Оксана (Маркетолог)",
+                avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80",
                 topic: "Типізація даних",
                 reward: 250,
-                message: "Привіт! Я намагаюся вивести суму віку та надбавки, але Python вибиває TypeError. Чому вони не складаються?",
-                hint: "Помилка додавання рядка (str) до числа (int). Перетвори age на int або зміни запис змінної!",
-                initialCode: `age = "19"\nbonus = 5\ntotal = age + bonus\nprint("Загалом:", total)`,
+                message: "Вітаю! Рахую фінальну вартість замовлення з урахуванням знижки, але ціна з розпродажу залишається строкою!",
+                hint: "Ціна `price` записана у вигляді рядка '1500'. Перетвори її на int/float або запиши як число!",
+                initialCode: `price = "1500"\ndiscount = 200\nfinal_price = price - discount\nprint("До сплати:", final_price)`,
                 verifyPython: `
 import sys, io
 sys.stdout = io.StringIO()
@@ -218,23 +218,23 @@ sys.stdout = io.StringIO()
 exec(user_code)
 output = sys.stdout.getvalue().strip()
 
-if "Загалом: 24" in output or output == "24":
+if "До сплати: 1300" in output or output == "1300":
     test_passed = True
-    test_msg = "Сума обчислена вірно!"
+    test_msg = "Ціну віднімано успішно!"
 else:
     test_passed = False
-    test_msg = "Очікувалося 'Загалом: 24', але отримано: '" + output + "'"
+    test_msg = "Очікувалося 'До сплати: 1300', але отримано: '" + output + "'"
 `
             },
             {
                 id: 2,
-                studentName: "Максим (StartUp)",
-                avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
+                studentName: "Андрій (Кібербезпека)",
+                avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&auto=format&fit=crop&q=80",
                 topic: "Створення змінних",
                 reward: 300,
-                message: "Хей! Я дав змінній назву 1st-project, але програма видає SyntaxError. Що не так?",
-                hint: "Назви змінних у Python не можуть починатися з цифр і не можуть містити дефіси `-`.",
-                initialCode: `1st-project = "Python Pro"\nprint("Назва:", 1st-project)`,
+                message: "Здоров! Хочу зберегти секретний ключ у змінну, але назва `user-token` спричиняє помилку SyntaxError!",
+                hint: "Змінна в Python не може містити дефіс `-`. Використовуй нижнє підкреслення `user_token`.",
+                initialCode: `user-token = "SEC3891X"\nprint("Ключ:", user-token)`,
                 verifyPython: `
 import sys, io
 sys.stdout = io.StringIO()
@@ -242,23 +242,23 @@ sys.stdout = io.StringIO()
 exec(user_code)
 output = sys.stdout.getvalue().strip()
 
-if "Назва: Python Pro" in output:
+if "Ключ: SEC3891X" in output:
     test_passed = True
-    test_msg = "Змінну перейменовано коректно!"
+    test_msg = "Назву змінної виправлено!"
 else:
     test_passed = False
-    test_msg = "Вивід коду: '" + output + "' не містить 'Назва: Python Pro'"
+    test_msg = "Вивід коду: '" + output + "' не містить 'Ключ: SEC3891X'"
 `
             },
             {
                 id: 3,
-                studentName: "Олена (Дизайн)",
-                avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&auto=format&fit=crop&q=80",
+                studentName: "Наталя (E-Commerce)",
+                avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80",
                 topic: "Умови (if/else)",
                 reward: 350,
-                message: "Привіт! Перевіряю, чи студент склав іспит. Якщо балів 50 або більше — він склав. Але Python кричить про SyntaxError!",
-                hint: "Для порівняння використовують `==` або `>=`, а не одне `=` (це оператор присвоєння).",
-                initialCode: `score = 75\nif score = 50:\n    print("Склав!")\nelse:\n    print("Не склав")`,
+                message: "Привіт! Перевіряю наявність товару на складі. Якщо кількість дорівнює 0 — треба вивести 'Немає в наявності'. Чому падає код?",
+                hint: "Для перевірки рівності використовується `==`, а не один знак `=`.",
+                initialCode: `stock = 0\nif stock = 0:\n    print("Немає в наявності")\nelse:\n    print("Є в наявності")`,
                 verifyPython: `
 import sys, io
 sys.stdout = io.StringIO()
@@ -266,48 +266,66 @@ sys.stdout = io.StringIO()
 exec(user_code)
 output = sys.stdout.getvalue().strip()
 
-if "Склав!" in output:
+if "Немає в наявності" in output:
     test_passed = True
-    test_msg = "Умова спрацювала вірно!"
+    test_msg = "Умову рівності налаштовано вірно!"
 else:
     test_passed = False
-    test_msg = "Очікувався вивід 'Склав!', але отримано '" + output + "'"
+    test_msg = "Очікувався вивід 'Немає в наявності', отримано '" + output + "'"
 `
             },
             {
                 id: 4,
-                studentName: "Богдан (GameDev)",
-                avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80",
+                studentName: "Денис (IoT розробник)",
+                avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&auto=format&fit=crop&q=80",
                 topic: "Цикл while",
                 reward: 400,
-                message: "SOS! Написав цикл для відліку HP від 3 до 1, а він працює безкінечно!",
-                hint: "Зменшуй значення `hp` всередині циклу (наприклад `hp -= 1`), інакше умова `hp > 0` завжди істинна.",
-                initialCode: `hp = 3\nwhile hp > 0:\n    print("Здоров'я:", hp)\n    # Помилка: hp не зменшується!`,
+                message: "Привіт! Роблю таймер зворотного відліку секундоміра від 5 до 1. Скрипт зациклився і зависає!",
+                hint: "Зменшуй параметр `timer -= 1` на кожному кроці циклу, щоб умова `timer > 0` колись стала хибною.",
+                initialCode: `timer = 5\nwhile timer > 0:\n    print("Залишилось:", timer)\n    # Помилка: таймер не зменшується!`,
                 verifyPython: `
 import sys, io
 sys.stdout = io.StringIO()
 
-loc = {}
-exec(user_code, {}, loc)
-output = sys.stdout.getvalue().strip()
+# Захист від нескінченного циклу за допомогою перехоплення ітерацій
+def safe_exec(code):
+    lines = code.split('\\n')
+    guarded_lines = []
+    for line in lines:
+        guarded_lines.append(line)
+        if 'while ' in line:
+            indent = len(line) - len(line.lstrip()) + 4
+            guarded_lines.append(' ' * indent + '_loop_count = globals().get("_loop_count", 0) + 1')
+            guarded_lines.append(' ' * indent + 'if _loop_count > 100: raise RuntimeError("Виявлено нескінченний цикл! Додайте зменшення значення змінної.")')
+    
+    globs = {"_loop_count": 0}
+    exec('\\n'.join(guarded_lines), globs)
+    return globs
 
-if output.count("Здоров'я:") == 3 and "Здоров'я: 1" in output and loc.get('hp', 0) <= 0:
-    test_passed = True
-    test_msg = "Цикл зменшує HP і вчасно зупиняється!"
-else:
+try:
+    loc = safe_exec(user_code)
+    output = sys.stdout.getvalue().strip()
+
+    if output.count("Залишилось:") == 5 and "Залишилось: 1" in output and loc.get('timer', 0) <= 0:
+        test_passed = True
+        test_msg = "Таймер коректно відрахував 5 секунд і зупинився!"
+    else:
+        test_passed = False
+        test_msg = "Цикл має вивести відлік від 5 до 1 та завершитися."
+except RuntimeError as err:
     test_passed = False
-    test_msg = "Цикл має вивести здоров'я 3, 2, 1 та завершитись."
+    test_msg = str(err)
 `
             },
             {
                 id: 5,
-                studentName: "Ігор (Data Science)",
-                avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
+                studentName: "Вікторія (HR)",
+                avatar: "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=100&auto=format&fit=crop&q=80",
                 topic: "Створення функцій",
                 reward: 450,
-                message: "Вітаю! Створив функцію для привітання, але отримую IndentationError!",
-                hint: "У Python всі блоки коду всередині `def` мають мати відступи (4 пробіли).",
-                initialCode: `def greet(name):\nprint("Привіт, " + name)\n\ngreet("Олексій")`,
+                message: "Добрий день! Написала функцію для розрахунку бонусів співробітникам, але отримую IndentationError!",
+                hint: "Усі рядки всередині тіла функції `def` повинні мати відступ у 4 пробіли.",
+                initialCode: `def calc_bonus(salary):\nbonus = salary * 0.1\nreturn bonus\n\nprint("Бонус:", calc_bonus(10000))`,
                 verifyPython: `
 import sys, io
 sys.stdout = io.StringIO()
@@ -315,23 +333,23 @@ sys.stdout = io.StringIO()
 exec(user_code)
 output = sys.stdout.getvalue().strip()
 
-if "Привіт, Олексій" in output:
+if "1000.0" in output or "1000" in output:
     test_passed = True
-    test_msg = "Функція відпрацювала з правильними відступами!"
+    test_msg = "Відступи у функції відновили роботу коду!"
 else:
     test_passed = False
-    test_msg = "Очікувалося 'Привіт, Олексій', отримано '" + output + "'"
+    test_msg = "Очікувався вивід 'Бонус: 1000.0', отримано '" + output + "'"
 `
             },
             {
                 id: 6,
-                studentName: "Дмитро (QA)",
-                avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
+                studentName: "Ярослав (Тестувальник)",
+                avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&auto=format&fit=crop&q=80",
                 topic: "Цикл for і range()",
                 reward: 500,
-                message: "Привіт! Хочу вивести числа від 1 до 5 за допомогою range(), але виводить лише до 4!",
-                hint: "Функція `range(start, stop)` не включає верхню межу `stop`. Щоб вивести 5, вкажи `range(1, 6)`.",
-                initialCode: `for i in range(1, 5):\n    print("Число:", i)`,
+                message: "Хей! Мені потрібно згенерувати ID номерів курсів від 10 до 15. Але range() зупиняється на 14!",
+                hint: "Кінцеве число у `range(10, 15)` не включається. Збільш його до 16: `range(10, 16)`.",
+                initialCode: `for course_id in range(10, 15):\n    print("Курс ID:", course_id)`,
                 verifyPython: `
 import sys, io
 sys.stdout = io.StringIO()
@@ -339,23 +357,23 @@ sys.stdout = io.StringIO()
 exec(user_code)
 output = sys.stdout.getvalue().strip()
 
-if "Число: 5" in output and "Число: 1" in output:
+if "Курс ID: 15" in output and "Курс ID: 10" in output:
     test_passed = True
-    test_msg = "Цикл вивів усі числа від 1 до 5!"
+    test_msg = "Діапазон range охоплює всі ID від 10 до 15!"
 else:
     test_passed = False
-    test_msg = "Код повинен вивести числа від 1 до 5 включно."
+    test_msg = "Код повинен вивести курси з ID від 10 до 15 включно."
 `
             },
             {
                 id: 7,
-                studentName: "Софія (Junior)",
-                avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
+                studentName: "Марія (Frontend)",
+                avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=100&auto=format&fit=crop&q=80",
                 topic: "Параметри функцій",
                 reward: 550,
-                message: "Допоможи! Функція має множити два числа, але падає з TypeError: missing argument!",
-                hint: "Виклик `multiply(5)` передає лише один аргумент, хоча функція чекає два (`a` та `b`).",
-                initialCode: `def multiply(a, b):\n    return a * b\n\nresult = multiply(5)\nprint("Результат:", result)`,
+                message: "Привіт! Створила функцію обчислення площі прямокутника, але отримую TypeError при виклику!",
+                hint: "Функція `area(width, height)` приймає 2 аргументи. Передай ширину та висоту при виклику.",
+                initialCode: `def area(width, height):\n    return width * height\n\nres = area(10)\nprint("Площа:", res)`,
                 verifyPython: `
 import sys, io
 sys.stdout = io.StringIO()
@@ -363,23 +381,23 @@ sys.stdout = io.StringIO()
 exec(user_code)
 output = sys.stdout.getvalue().strip()
 
-if "Результат:" in output and not "missing" in output:
+if "Площа:" in output and not "missing" in output:
     test_passed = True
-    test_msg = "Передано всі необхідні параметри!"
+    test_msg = "Обидва параметри передано у функцію!"
 else:
     test_passed = False
-    test_msg = "Передай обидва аргументи у функцію multiply."
+    test_msg = "Передай обидва параметри width та height у функцію area."
 `
             },
             {
                 id: 8,
-                studentName: "Тарас (Аналітик)",
-                avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80",
+                studentName: "Влад (Backend Dev)",
+                avatar: "https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=100&auto=format&fit=crop&q=80",
                 topic: "Методи рядків та списків",
                 reward: 600,
-                message: "Привіт! Хочу об'єднати список слів через пробіл, але виникає AttributeError: 'list' object has no attribute 'join'.",
-                hint: "Метод `.join()` викликається у рядка-роздільника, а не у списку: `' '.join(words)`.",
-                initialCode: `words = ["Python", "це", "круто"]\ntext = words.join(" ")\nprint(text)`,
+                message: "Вітаю! Збираю хештеги списку у єдиний рядок через дефіс, але Python пише AttributeError!",
+                hint: "Викликай `.join()` у рядка-роздільника: `"-".join(tags)`.",
+                initialCode: `tags = ["python", "django", "api"]\nresult = tags.join("-")\nprint(result)`,
                 verifyPython: `
 import sys, io
 sys.stdout = io.StringIO()
@@ -387,23 +405,23 @@ sys.stdout = io.StringIO()
 exec(user_code)
 output = sys.stdout.getvalue().strip()
 
-if output == "Python це круто":
+if output == "python-django-api":
     test_passed = True
-    test_msg = "Метод join викликано вірно!"
+    test_msg = "Метод join викликано правильно!"
 else:
     test_passed = False
-    test_msg = "Очікувалося 'Python це круто', але отримано '" + output + "'"
+    test_msg = "Очікувалося 'python-django-api', отримано '" + output + "'"
 `
             },
             {
                 id: 9,
-                studentName: "Катерина (Fullstack)",
-                avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80",
+                studentName: "Ірина (FinTech)",
+                avatar: "https://images.unsplash.com/photo-1554151228-14d9def656e4?w=100&auto=format&fit=crop&q=80",
                 topic: "Складні умови (and/or)",
                 reward: 700,
-                message: "Хей! Перевіряю знижку: якщо вік < 18 АБО > 60 — є знижка. Для віку 25 пише 'Є знижка', хоча її бути не повинно!",
-                hint: "Число не може бути одночасно і меншим за 18, І більшим за 60. Використовуй `or` замість `and`.",
-                initialCode: `age = 25\nif age < 18 and age > 60:\n    print("Є знижка")\nelse:\n    print("Без знижки")`,
+                message: "Привіт! Безкоштовна доставка надається, якщо сума замовлення > 1000 АБО є VIP-статус. Сума 500 без VIP виводить 'Безкоштовна доставка'!",
+                hint: "У коді використано `and` замість `or`, або логіку умови переплутано. Використовуй `or` для перевірки хоча б однієї з умов.",
+                initialCode: `amount = 500\nis_vip = False\n\nif amount > 1000 and is_vip:\n    print("Безкоштовна доставка")\nelse:\n    print("Доставка платна")`,
                 verifyPython: `
 import sys, io
 sys.stdout = io.StringIO()
@@ -412,23 +430,23 @@ test_env = {}
 exec(user_code, {}, test_env)
 output = sys.stdout.getvalue().strip()
 
-if output == "Без знижки":
+if output == "Доставка платна":
     test_passed = True
-    test_msg = "Логічну умову виправлено!"
+    test_msg = "Логічну умову безкоштовної доставки виправлено!"
 else:
     test_passed = False
-    test_msg = "Для віку 25 очікується 'Без знижки', але код вивів '" + output + "'"
+    test_msg = "Для суми 500 та is_vip=False очікується 'Доставка платна', отримано '" + output + "'"
 `
             },
             {
                 id: 10,
-                studentName: "Артем (Senior)",
-                avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100&auto=format&fit=crop&q=80",
+                studentName: "Роман (Algo Expert)",
+                avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
                 topic: "Рекурсія та умови зупинки",
                 reward: 1000,
-                message: "Фінал! Функція для обчислення факторіалу входить у безкінечну рекурсію `RecursionError`!",
-                hint: "Рекурсивна функція вимагає базового випадку для зупинки: `if n <= 1: return 1`.",
-                initialCode: `def factorial(n):\n    # Відсутній базовий випадок зупинки!\n    return n * factorial(n - 1)\n\nprint("Факторіал 5:", factorial(5))`,
+                message: "Привіт, колего! Написав рекурсивну функцію для обчислення суми чисел від N до 1, але вона падає з RecursionError!",
+                hint: "Додай базовий випадок зупинки рекурсії: `if n <= 1: return 1`.",
+                initialCode: `def sum_recursive(n):\n    # Потрібна умова зупинки!\n    return n + sum_recursive(n - 1)\n\nprint("Сума:", sum_recursive(5))`,
                 verifyPython: `
 import sys, io
 sys.stdout = io.StringIO()
@@ -436,12 +454,12 @@ sys.stdout = io.StringIO()
 exec(user_code)
 output = sys.stdout.getvalue().strip()
 
-if "120" in output and "Факторіал 5:" in output:
+if "15" in output and "Сума:" in output:
     test_passed = True
-    test_msg = "Факторіал обчислено вірно, рекурсію зупинено!"
+    test_msg = "Рекурсію зупинено, суму обчислено вірно!"
 else:
     test_passed = False
-    test_msg = "Очікувалося 'Факторіал 5: 120', отримано '" + output + "'"
+    test_msg = "Очікувалося 'Сума: 15', отримано '" + output + "'"
 `
             }
         ];
@@ -480,14 +498,14 @@ else:
         };
 
         function saveProgress() {
-            localStorage.setItem('python_tutor_game_v2', JSON.stringify({
+            localStorage.setItem('python_tutor_game_v3_part2', JSON.stringify({
                 balance: state.balance,
                 completedTasks: state.completedTasks
             }));
         }
 
         function loadSavedProgress() {
-            const saved = localStorage.getItem('python_tutor_game_v2');
+            const saved = localStorage.getItem('python_tutor_game_v3_part2');
             if (saved) {
                 try {
                     const parsed = JSON.parse(saved);
@@ -591,7 +609,7 @@ else:
                 msgSuccess.className = "flex flex-col items-start max-w-[85%] mt-2";
                 msgSuccess.innerHTML = `
                     <div class="bg-telegram-bubbleIn text-emerald-300 p-3 rounded-2xl rounded-tl-none shadow-md text-sm border border-emerald-500/20">
-                        Дякую величезне! Твій варіант коду працює бездоганно! Тримай винагороду! 🎉
+                        Супер! Твій варіант розв'язку працює ідеально! Дякую за допомогу! 🎉
                     </div>
                     <span class="text-[10px] text-emerald-500/80 mt-1 ml-1 flex items-center gap-1">
                         <i class="fa-solid fa-circle-check"></i> Винагороду +${task.reward} ₴ отримано
@@ -604,8 +622,8 @@ else:
         }
 
         function showChatList() {
-            headerTitle.innerText = "Python Ментор";
-            headerSubtitle.innerText = "Онлайн • Студенти чекають";
+            headerTitle.innerText = "Python Ментор (Сезон 2)";
+            headerSubtitle.innerText = "Онлайн • Нові студенти";
             headerAvatar.innerHTML = `<i class="fa-solid fa-code"></i>`;
             backBtn.classList.add('hidden');
 
@@ -720,7 +738,7 @@ else:
 
     <!-- Brython Runner Script -->
     <script type="text/python">
-from browser import window, window
+from browser import window
 
 def execute_brython_task(user_code, verify_script):
     try:
